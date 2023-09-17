@@ -5,10 +5,13 @@ use foroco\BrowserDetection;
 
 class AuthApiV2 {
     private $log;
+    private $pdo;
+    private $mfa;
     
-    function __construct($log, $pdo) {
+    function __construct($log, $pdo, $mfa) {
         $this -> log = $log;
         $this -> pdo = $pdo;
+        $this -> mfa = $mfa;
         
         $this -> log -> debug('Initialized auth API V2');
     }
@@ -16,6 +19,8 @@ class AuthApiV2 {
     public function initRoutes($rc) {
         $rc -> post('/login', [$this, 'login']);
         $this -> log -> debug('Registered route POST /login');
+        
+        //
     }
     
     public function login($path, $query, $body, $auth, $ua) {
@@ -55,21 +60,18 @@ class AuthApiV2 {
         if(! $row['verified'])
             throw new APIException(401, 'ACCOUNT_INACTIVE', 'Your account is inactive. Please check your mailbox for activation link');
         
-        /*if(isset($body['code_2fa'])) {
-            if(!response2fa($pdo, $row['uid'], 'login', null, $jreq['code_2fa']))
-                throw new VmsException('Invalid 2FA code');
+        if(isset($body['code_2fa'])) {
+            if(! $this -> mfa -> response($row['uid'], 'login', null, $body['code_2fa']))
+                throw new APIException(401, 'INVALID_2FA', 'Invalid 2FA code');
         }
         else {
-            $prov = challenge2fa($pdo, $row['uid'], 'login', 'login', null);
-            if($prov != null) {
-                $jresp['need_2fa'] = true;
-                $jresp['provider_2fa'] = $prov;
-                throw new VmsException('2FA needed');
-            }
-            else {
-                $jresp['need_2fa'] = false;
-            }
-        }*/
+            $prov = $this -> mfa -> challenge($row['uid'], 'login', 'login', null);
+            if($prov != null)
+                return [
+                    'api_key' => null,
+                    'mfa_provider' => $prov
+                ];
+        }
     
         $generatedApiKey = bin2hex(random_bytes(32));
         
@@ -106,11 +108,13 @@ class AuthApiV2 {
             :wa_device
         )";
         
-        $q = $pdo -> prepare($sql);
+        $q = $this -> pdo -> prepare($sql);
         $q -> execute($task);
         
-        $jresp['success'] = true;
-        $jresp['api_key'] = $generatedApiKey;
+        return [
+            'api_key' => $generatedApiKey,
+            'mfa_provider' => null
+        ];
     }
 }
 
