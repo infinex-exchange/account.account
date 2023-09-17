@@ -1,0 +1,14 @@
+{
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/infinex-exchange/common"
+        }
+    ],
+    "require": {
+        "infinex-exchange/common": "dev-main",
+        "gregwar/captcha": "^1.1",
+        "foroco/php-browser-detection": "^2.3",
+        "pragmarx/google2fa": "^8.0"
+    }
+}
