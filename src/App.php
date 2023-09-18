@@ -1,7 +1,8 @@
 <?php
 
-require __DIR__.'/AuthApiV2.php';
 require __DIR__.'/MFA.php';
+require __DIR__.'/LoginRegisterAPI.php';
+require __DIR__.'/SessionsApiKeysAPI.php';
 
 class App extends Infinex\App\Daemon {
     private $pdo;
@@ -19,7 +20,20 @@ class App extends Infinex\App\Daemon {
         $this -> api = new Infinex\API(
             $this -> log,
             'api_auth',
-            new AuthApiV2($this -> log, $this -> pdo, $this -> mfa)
+            [
+                new LoginRegisterAPI(
+                    $this -> log,
+                    $this -> amqp,
+                    $this -> pdo,
+                    $this -> mfa
+                ),
+                new SessionsApiKeysAPI(
+                    $this -> log,
+                    $this -> amqp,
+                    $this -> pdo,
+                    $this -> mfa
+                )
+            ]
         );
         
         $th = $this;

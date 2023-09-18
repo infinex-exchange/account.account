@@ -38,4 +38,16 @@ function validate2FA($code) {
     return preg_match('/^[0-9]{6}$/', $code);
 }
 
+function validateUint($uint) {
+    if(!is_int($uint)) return false;
+    if($uint < 0) return false;
+    return true;
+}
+
+function validateUintNz($uint) {
+    if(!is_int($uint)) return false;
+    if($uint < 1) return false;
+    return true;
+}
+
 ?>

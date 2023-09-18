@@ -12,4 +12,6 @@ define('DB_USER', 'authapiv2');
 define('DB_PASS', 'password');
 define('DB_NAME', 'infinex_auth');
 
+define('CAPTCHA_SALT', 'AAAaaa');
+
 ?>
