@@ -181,7 +181,8 @@ class SessionsApiKeysAPI {
         
         $sql = "SELECT sid,
                        api_key,
-                       ak_description
+                       ak_description,
+                       EXTRACT(epoch FROM wa_lastact) AS wa_lastact
                FROM sessions
                WHERE uid = :uid
                AND origin = 'API'
@@ -204,7 +205,8 @@ class SessionsApiKeysAPI {
             $apiKeys[] = [
                 'keyid' => $row['sid'],
                 'api_key' => $row['api_key'],
-                'description' => $row['ak_description']
+                'description' => $row['ak_description'],
+                'lastact' => $row['wa_lastact']
             ];
         }
         
@@ -227,7 +229,8 @@ class SessionsApiKeysAPI {
         );
         
         $sql = "SELECT api_key,
-                       ak_description
+                       ak_description,
+                       EXTRACT(epoch FROM wa_lastact) AS wa_lastact
                FROM sessions
                WHERE uid = :uid
                AND sid = :sid
@@ -243,7 +246,8 @@ class SessionsApiKeysAPI {
         return [
              'keyid' => $row['sid'],
              'api_key' => $row['api_key'],
-             'description' => $row['ak_description']
+             'description' => $row['ak_description'],
+             'lastact' => $row['wa_lastact']
         ];
     }
     
