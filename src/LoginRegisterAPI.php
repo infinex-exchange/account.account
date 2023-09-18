@@ -25,6 +25,9 @@ class LoginRegisterAPI {
         $rc -> post('/login', [$this, 'login']);
         $this -> log -> debug('Registered route POST /login');
         
+        $rc -> post('/logout', [$this, 'logout']);
+        $this -> log -> debug('Registered route POST /logout');
+        
         $rc -> post('/register', [$this, 'register']);
         $this -> log -> debug('Registered route POST /register');
         
@@ -130,6 +133,27 @@ class LoginRegisterAPI {
             'api_key' => $generatedApiKey,
             'mfa_provider' => null
         ];
+    }
+    
+    public function logout($path, $query, $body, $auth, $ua) {
+        if(!$auth)
+            throw new APIException(401, 'UNAUTHORIZED', 'Unauthorized');
+        
+        $task = array(
+            ':sid' => $auth['sid']
+        );
+        
+        $sql = "DELETE FROM sessions
+                WHERE sid = :sid
+                AND origin = 'WEBAPP'
+                RETURNING 1";
+        
+        $q = $this -> pdo -> prepare($sql);
+        $q -> execute($task);
+        $row = $q -> fetch();
+        
+        if(!$row)
+            throw new APIException(404, 'NOT_FOUND', 'Session not found');
     }
     
     public function register($path, $query, $body, $auth) {
