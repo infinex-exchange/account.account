@@ -22,7 +22,7 @@ class App extends Infinex\App\Daemon {
         
         $this -> api = new Infinex\API\API(
             $this -> log,
-            'api_auth',
+            'api_account',
             [
                 new SignupAPI(
                     $this -> log,
