@@ -120,6 +120,10 @@ class EmailAPI {
         
         $this -> pdo -> beginTransaction();
         
+        $task = array(
+            ':uid' => $auth['uid']
+        );
+        
         $sql = "DELETE FROM email_codes
                 WHERE uid = :uid
                 AND context = 'CHANGE_EMAIL'";
