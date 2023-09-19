@@ -90,7 +90,7 @@ class SessionsApiKeysAPI {
             
             $sessions[] = [
                 'sid' => $row['sid'],
-                'lastact' => $row['wa_lastact'],
+                'lastact' => intval($row['wa_lastact']),
                 'browser' => $row['wa_browser'],
                 'os' => $row['wa_os'],
                 'device' => $row['wa_device'],
@@ -210,7 +210,7 @@ class SessionsApiKeysAPI {
             $path['sid'] = $auth['sid'];
         
         if(!validateUintNz($path['sid']))
-            throw new APIException(400, 'VALIDATION_ERROR', 'sid '.$path['sid']);
+            throw new APIException(400, 'VALIDATION_ERROR', 'sid');
         
         $task = array(
             ':uid' => $auth['uid'],
@@ -236,7 +236,7 @@ class SessionsApiKeysAPI {
         
         return [
             'sid' => $path['sid'],
-            'lastact' => $row['wa_lastact'],
+            'lastact' => intval($row['wa_lastact']),
             'browser' => $row['wa_browser'],
             'os' => $row['wa_os'],
             'device' => $row['wa_device'],
@@ -314,7 +314,7 @@ class SessionsApiKeysAPI {
                 'keyid' => $row['sid'],
                 'api_key' => $row['api_key'],
                 'description' => $row['ak_description'],
-                'lastact' => $row['wa_lastact']
+                'lastact' => intval($row['wa_lastact'])
             ];
         }
         
@@ -355,7 +355,7 @@ class SessionsApiKeysAPI {
              'keyid' => $row['sid'],
              'api_key' => $row['api_key'],
              'description' => $row['ak_description'],
-             'lastact' => $row['wa_lastact']
+             'lastact' => intval($row['wa_lastact'])
         ];
     }
     
