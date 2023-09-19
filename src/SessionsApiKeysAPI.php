@@ -210,7 +210,7 @@ class SessionsApiKeysAPI {
             $path['sid'] = $auth['sid'];
         
         if(!validateUintNz($path['sid']))
-            throw new APIException(400, 'VALIDATION_ERROR', 'sid');
+            throw new APIException(400, 'VALIDATION_ERROR', 'sid '.json_encode($path);
         
         $task = array(
             ':uid' => $auth['uid'],
