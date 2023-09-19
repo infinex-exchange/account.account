@@ -8,13 +8,11 @@ class PasswordAPI {
     private $log;
     private $amqp;
     private $pdo;
-    private $mfa;
     
-    function __construct($log, $amqp, $pdo, $mfa) {
+    function __construct($log, $amqp, $pdo) {
         $this -> log = $log;
         $this -> amqp = $amqp;
         $this -> pdo = $pdo;
-        $this -> mfa = $mfa;
         
         $this -> log -> debug('Initialized password API');
     }
