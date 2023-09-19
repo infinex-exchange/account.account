@@ -24,14 +24,14 @@ class SessionsApiKeysAPI {
         $rc -> get('/sessions', [$this, 'getAllSessions']);
         $this -> log -> debug('Registered route GET /sessions');
         
-        $rc -> post('/sessions', [$this, 'login']);
-        $this -> log -> debug('Registered route POST /sessions');
-        
         $rc -> get('/sessions/{sid}', [$this, 'getSession']);
         $this -> log -> debug('Registered route GET /sessions/{sid}');
         
         $rc -> delete('/sessions/{sid}', [$this, 'killSession']);
         $this -> log -> debug('Registered route DELETE /sessions/{sid}');
+        
+        $rc -> post('/sessions', [$this, 'login']);
+        $this -> log -> debug('Registered route POST /sessions');
         
         $rc -> get('/api_keys', [$this, 'getAllApiKeys']);
         $this -> log -> debug('Registered route GET /api_keys');
@@ -39,14 +39,14 @@ class SessionsApiKeysAPI {
         $rc -> get('/api_keys/{keyid}', [$this, 'getApiKey']);
         $this -> log -> debug('Registered route GET /api_keys/{keyid}');
         
+        $rc -> patch('/api_keys/{keyid}', [$this, 'editApiKey']);
+        $this -> log -> debug('Registered route PATCH /api_keys/{keyid}');
+        
         $rc -> delete('/api_keys/{keyid}', [$this, 'deleteApiKey']);
         $this -> log -> debug('Registered route DELETE /api_keys/{keyid}');
         
         $rc -> post('/api_keys', [$this, 'addApiKey']);
         $this -> log -> debug('Registered route POST /api_keys');
-        
-        $rc -> patch('/api_keys/{keyid}', [$this, 'editApiKey']);
-        $this -> log -> debug('Registered route PATCH /api_keys/{keyid}');
     }
     
     public function getAllSessions($path, $query, $body, $auth, $ua) {

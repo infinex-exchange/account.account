@@ -19,6 +19,9 @@ class SignupAPI {
     }
     
     public function initRoutes($rc) {
+        $rc -> get('/signup', [$this, 'getCaptcha']);
+        $this -> log -> debug('Registered route GET /signup');
+        
         $rc -> post('/signup', [$this, 'register']);
         $this -> log -> debug('Registered route POST /signup');
         
