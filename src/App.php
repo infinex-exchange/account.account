@@ -1,7 +1,7 @@
 <?php
 
 require __DIR__.'/MFA.php';
-require __DIR__.'/LoginRegisterAPI.php';
+require __DIR__.'/SignupAPI.php';
 require __DIR__.'/SessionsApiKeysAPI.php';
 
 class App extends Infinex\App\Daemon {
@@ -21,11 +21,10 @@ class App extends Infinex\App\Daemon {
             $this -> log,
             'api_auth',
             [
-                new LoginRegisterAPI(
+                new SignupAPI(
                     $this -> log,
                     $this -> amqp,
-                    $this -> pdo,
-                    $this -> mfa
+                    $this -> pdo
                 ),
                 new SessionsApiKeysAPI(
                     $this -> log,
