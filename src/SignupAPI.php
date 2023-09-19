@@ -19,14 +19,14 @@ class SignupAPI {
     }
     
     public function initRoutes($rc) {
-        $rc -> get('/signup', [$this, 'getCaptcha']);
-        $this -> log -> debug('Registered route GET /signup');
+        $rc -> get('/captcha', [$this, 'getCaptcha']);
+        $this -> log -> debug('Registered route GET /captcha');
         
-        $rc -> post('/signup', [$this, 'register']);
-        $this -> log -> debug('Registered route POST /signup');
+        $rc -> post('/', [$this, 'register']);
+        $this -> log -> debug('Registered route POST /');
         
-        $rc -> patch('/signup', [$this, 'verify']);
-        $this -> log -> debug('Registered route PATCH /signup');
+        $rc -> patch('/', [$this, 'verify']);
+        $this -> log -> debug('Registered route PATCH /');
     }
     
     public function register($path, $query, $body, $auth) {
