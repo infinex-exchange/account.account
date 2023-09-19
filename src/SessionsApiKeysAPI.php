@@ -113,13 +113,13 @@ class SessionsApiKeysAPI {
         if(!isset($body['password']))
             throw new APIException(400, 'MISSING_DATA', 'password');
         
-        if(!$this -> validateEmail($body['email']))
+        if(!validateEmail($body['email']))
             throw new APIException(400, 'VALIDATION_ERROR', 'email');
-        if(!$this -> validatePassword($body['password']))
+        if(!validatePassword($body['password']))
             throw new APIException(400, 'VALIDATION_ERROR', 'password');
         if(isset($body['remember']) && !is_bool($body['remember']))
             throw new APIException(400, 'VALIDATION_ERROR', 'remember');
-        if(isset($body['code_2fa']) && !$this -> validate2FA($body['code_2fa']))
+        if(isset($body['code_2fa']) && !validate2FA($body['code_2fa']))
             throw new APIException(400, 'VALIDATION_ERROR', 'code_2fa');
         
         $email = strtolower($body['email']);
@@ -391,7 +391,7 @@ class SessionsApiKeysAPI {
         if(!isset($body['description']))
             throw new APIException(400, 'MISSING_DATA', 'description');
         
-        if(!$this -> validateApiKeyDescription($body['description']))
+        if(!validateApiKeyDescription($body['description']))
             throw new APIException(400, 'VALIDATION_ERROR', 'description');
     
         // Check api key with this name already exists
@@ -454,7 +454,7 @@ class SessionsApiKeysAPI {
         
         if(!validateUintNz($path['keyid']))
             throw new APIException(400, 'VALIDATION_ERROR', 'keyid');
-        if(!$this -> validateApiKeyDescription($body['description']))
+        if(!validateApiKeyDescription($body['description']))
             throw new APIException(400, 'VALIDATION_ERROR', 'description');
     
         // Check api key with this name already exists

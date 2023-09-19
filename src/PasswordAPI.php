@@ -82,7 +82,7 @@ class PasswordAPI {
         if(!isset($body['email']))
             throw new APIException(400, 'MISSING_DATA', 'email');
         
-        if(!$this -> validateEmail($body['email']))
+        if(!validateEmail($body['email']))
             throw new APIException(400, 'VALIDATION_ERROR', 'email');
         
         $email = strtolower($body['email']);
@@ -147,11 +147,11 @@ class PasswordAPI {
         if(!isset($body['password']))
             throw new APIException(400, 'MISSING_DATA', 'password');
         
-        if(!$this -> validateEmail($body['email']))
+        if(!validateEmail($body['email']))
             throw new APIException(400, 'VALIDATION_ERROR', 'email');
-        if(!$this -> validateVeriCode($body['code']))
+        if(!validateVeriCode($body['code']))
             throw new APIException(400, 'VALIDATION_ERROR', 'code');
-        if(!$this -> validatePassword($body['password']))
+        if(!validatePassword($body['password']))
             throw new APIException(400, 'VALIDATION_ERROR', 'password');
         
         $email = strtolower($body['email']);

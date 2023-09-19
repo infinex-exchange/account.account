@@ -232,7 +232,7 @@ class MFAAPI {
         if(!isset($query['email']))
             throw new APIException(400, 'MISSING_DATA', 'email');
         
-        if(!$this -> validateEmail($query['email']))
+        if(!validateEmail($query['email']))
             throw new APIException(400, 'VALIDATION_ERROR', 'email');
         
         $email = strtolower($query['email']);
@@ -256,9 +256,9 @@ class MFAAPI {
         if(!isset($body['code']))
             throw new APIException(400, 'MISSING_DATA', 'code');
         
-        if(!$this -> validateEmail($body['email']))
+        if(!validateEmail($body['email']))
             throw new APIException(400, 'VALIDATION_ERROR', 'email');
-        if(!$this -> validateVeriCode($body['code']))
+        if(!validateVeriCode($body['code']))
             throw new APIException(400, 'VALIDATION_ERROR', 'code');
         
         $email = strtolower($body['email']);
