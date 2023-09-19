@@ -78,7 +78,7 @@ class SignupAPI {
         
         if($row) {
             $this -> pdo -> rollBack();
-            throw new APIException(400, 'EMAIL_ALREADY_USED', 'There is already an account registered with this email address.');
+            throw new APIException(409, 'ALREADY_EXISTS', 'There is already an account registered with this email address.');
         }
     
         $task = array(

@@ -103,6 +103,21 @@ class EmailAPI {
             throw new APIException(400, 'NOTHING_CHANGED', 'New e-mail is the same as old e-mail');
         $oldEmail = $row['email'];
         
+        $task = array(
+            ':email' => $email
+        );
+        
+        $sql = 'SELECT 1
+                FROM users
+                WHERE email = :email';
+        
+        $q = $this -> pdo -> prepare($sql);
+        $q -> execute($task);
+        $row = $q -> fetch();
+        
+        if($row)
+            throw new APIException(409, 'ALREADY_EXISTS', 'This e-mail address is already in use');
+        
         $this -> pdo -> beginTransaction();
         
         $sql = "DELETE FROM email_codes
@@ -182,10 +197,29 @@ class EmailAPI {
             $this -> pdo -> rollBack();
             throw new APIException(401, 'INVALID_VERIFICATION_CODE', 'Invalid verification code');
         }
+        $newEmail = $row['context_data'];
+        
+        $task = array(
+            ':email' => $newEmail
+        );
+        
+        $sql = 'SELECT 1
+                FROM users
+                WHERE email = :email
+                FOR UPDATE';
+        
+        $q = $this -> pdo -> prepare($sql);
+        $q -> execute($task);
+        $row = $q -> fetch();
+        
+        if($row) {
+            $this -> pdo -> rollBack();
+            throw new APIException(409, 'ALREADY_EXISTS', 'This e-mail address is already in use');
+        }
         
         $task = array(
             ':uid' => $auth['uid'],
-            ':email' => $row['context_data'] 
+            ':email' => $newEmail
         );
     
         $sql = 'UPDATE users
