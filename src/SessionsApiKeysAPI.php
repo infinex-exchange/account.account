@@ -474,8 +474,11 @@ class SessionsApiKeysAPI {
         $q -> execute($task);
         $row = $q -> fetch();
         
-        if($row)
+        if($row) {
+            if($row['sid'] == $path['keyid'])
+                return;
             throw new APIException(409, 'ALREADY_EXISTS', 'API key with this name already exists');
+        }
         
         // Update api key
         $task = array(
@@ -485,7 +488,7 @@ class SessionsApiKeysAPI {
         );
         
         $sql = "UPDATE sessions
-                SET ak_description = :ak_description
+                SET ak_description = :description
                 WHERE uid = :uid
                 AND sid = :sid
                 AND origin = 'API'
