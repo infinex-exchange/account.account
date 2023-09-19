@@ -90,7 +90,7 @@ class SessionsApiKeysAPI {
             
             $sessions[] = [
                 'sid' => $row['sid'],
-                'lastact' => intval($row['wa_lastact']),
+                'lastact' => $row['wa_lastact'] ? intval($row['wa_lastact']) : null,
                 'browser' => $row['wa_browser'],
                 'os' => $row['wa_os'],
                 'device' => $row['wa_device'],
@@ -236,7 +236,7 @@ class SessionsApiKeysAPI {
         
         return [
             'sid' => $path['sid'],
-            'lastact' => intval($row['wa_lastact']),
+            'lastact' => $row['wa_lastact'] ? intval($row['wa_lastact']) : null,
             'browser' => $row['wa_browser'],
             'os' => $row['wa_os'],
             'device' => $row['wa_device'],
@@ -314,7 +314,7 @@ class SessionsApiKeysAPI {
                 'keyid' => $row['sid'],
                 'api_key' => $row['api_key'],
                 'description' => $row['ak_description'],
-                'lastact' => intval($row['wa_lastact'])
+                'lastact' => $row['wa_lastact'] ? intval($row['wa_lastact']) : null
             ];
         }
         
@@ -352,10 +352,10 @@ class SessionsApiKeysAPI {
             throw new APIException(404, 'NOT_FOUND', 'API key '.$path['keyid'].' not found');
         
         return [
-             'keyid' => $row['sid'],
+             'keyid' => $path['keyid'],
              'api_key' => $row['api_key'],
              'description' => $row['ak_description'],
-             'lastact' => intval($row['wa_lastact'])
+             'lastact' => $row['wa_lastact'] ? intval($row['wa_lastact']) : null
         ];
     }
     
@@ -441,7 +441,7 @@ class SessionsApiKeysAPI {
         $row = $q -> fetch();
         
         return [
-            'sid' => $row['sid'],
+            'keyid' => $row['sid'],
             'api_key' => $generatedApiKey
         ];
     }
