@@ -164,7 +164,7 @@ class EmailAPI {
                 'template' => 'change_email',
                 'context' => [
                     'new_email' => $email,
-                    'code' => $genetedCode
+                    'code' => $generatedCode
                 ]
             ]
         );
