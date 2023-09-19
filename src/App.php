@@ -5,6 +5,7 @@ require __DIR__.'/SignupAPI.php';
 require __DIR__.'/SessionsApiKeysAPI.php';
 require __DIR__.'/PasswordAPI.php';
 require __DIR__.'/EmailAPI.php';
+//require __DIR__.'/MFAAPI.php';
 
 class App extends Infinex\App\Daemon {
     private $pdo;
@@ -43,7 +44,13 @@ class App extends Infinex\App\Daemon {
                     $this -> log,
                     $this -> amqp,
                     $this -> pdo
-                )
+                )/*,
+                new MFAAPI(
+                    $this -> log,
+                    $this -> amqp,
+                    $this -> pdo,
+                    $this -> mfa
+                )*/
             ]
         );
         

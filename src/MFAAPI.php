@@ -3,9 +3,8 @@
 require __DIR__.'/validate.php';
 
 use Infinex\API\APIException;
-use Gregwar\Captcha\CaptchaBuilder;
 
-class SignupAPI {
+class MFAAPI {
     private $log;
     private $amqp;
     private $pdo;
@@ -15,7 +14,7 @@ class SignupAPI {
         $this -> amqp = $amqp;
         $this -> pdo = $pdo;
         
-        $this -> log -> debug('Initialized sign up API');
+        $this -> log -> debug('Initialized MFA API');
     }
     
     public function initRoutes($rc) {
