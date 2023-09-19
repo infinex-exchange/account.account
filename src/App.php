@@ -20,7 +20,7 @@ class App extends Infinex\App\Daemon {
         
         $this -> mfa = new MFA($this -> log, $this -> amqp, $this -> pdo);
         
-        $this -> api = new Infinex\API(
+        $this -> api = new Infinex\API\API(
             $this -> log,
             'api_auth',
             [
