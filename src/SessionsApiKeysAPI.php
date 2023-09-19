@@ -123,6 +123,7 @@ class SessionsApiKeysAPI {
             throw new APIException(400, 'VALIDATION_ERROR', 'code_2fa');
         
         $email = strtolower($body['email']);
+        $remember = isset($body['remember']) ? $body['remember'] : false;
         
         $task = array(
             ':email' => $email
@@ -165,7 +166,7 @@ class SessionsApiKeysAPI {
         $task = array(
             ':uid' => $row['uid'],
             ':api_key' => $generatedApiKey,
-            ':wa_remember' => $body['remember'] ? 1 : 0,
+            ':wa_remember' => $remember ? 1 : 0,
             ':wa_browser' => $browser['browser_title'],
             ':wa_os' => $browser['os_title'],
             ':wa_device' => $browser['device_type']
