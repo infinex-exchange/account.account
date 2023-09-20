@@ -81,7 +81,7 @@ class MFAAPI {
         if(!is_array($body['cases']))
             throw new APIException(400, 'VALIDATION_ERROR', 'cases is not an array');
         foreach($body['cases'] as $k => $v) {
-            if(array_key_exists($k, $this -> mapCaseToCol))
+            if(!array_key_exists($k, $this -> mapCaseToCol))
                 throw new APIException(400, 'VALIDATION_ERROR', 'cases contains an invalid key');
             if(!is_bool($v))
                 throw new APIException(400, 'VALIDATION_ERROR', 'cases contains a non-boolean value');
