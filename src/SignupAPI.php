@@ -129,89 +129,18 @@ class SignupAPI {
         $q = $this -> pdo -> prepare($sql);
         $q -> execute($task);
         
-        // TODO: Remove in the future. Create wallets for all assets
-        $task = array(
-            ':uid' => $uid
-        );
-        
-        $sql = 'INSERT INTO wallet_balances (
-            uid,
-            assetid,
-            total,
-            locked
-        )
-        SELECT :uid,
-               assetid,
-               0,
-               0
-        FROM assets';
-        
-        $q = $this -> pdo -> prepare($sql);
-        $q -> execute($task);
-        
-        // TODO: Remove in the future. Reflink
-        if(isset($body['refid'])) {
-            $task = array(
-                ':refid' => $body['refid']
-            );
-            
-            $sql = 'SELECT uid,
-                           active
-                    FROM reflinks
-                    WHERE refid = :refid';
-            
-            $q = $this -> pdo -> prepare($sql);
-            $q -> execute($task);
-            $row = $q -> fetch();
-            
-            if($row) {
-                if($row['active']) {
-                    $task = array(
-                        ':refid' => $body['refid'],
-                        ':slave_uid' => $uid
-                    );
-                    
-                    $sql = 'INSERT INTO affiliations(
-                                refid,
-                                slave_uid,
-                                slave_level
-                            )
-                            VALUES(
-                                :refid,
-                                :slave_uid,
-                                1
-                            )';
-                    
-                    $q = $this -> pdo -> prepare($sql);
-                    $q -> execute($task);
-                }
-                
-                $task = array(
-                    ':slave_uid' => $uid,
-                    ':master_uid' => $row['uid']
-                );
-                
-                $sql = 'INSERT INTO affiliations(
-                            refid,
-                            slave_uid,
-                            slave_level
-                        )
-                        SELECT affiliations.refid,
-                               :slave_uid,
-                               affiliations.slave_level + 1
-                        FROM affiliations,
-                             reflinks
-                        WHERE affiliations.refid = reflinks.refid
-                        AND affiliations.slave_level <= 3
-                        AND affiliations.slave_uid = :master_uid
-                        AND reflinks.active = TRUE';
-            
-                $q = $this -> pdo -> prepare($sql);
-                $q -> execute($task);
-            }
-        }
-        
         $this -> pdo -> commit();
+        
+        $this -> amqp -> pub(
+            'register_user',
+            [
+                'uid' => $uid,
+                'refid' => isset($body['refid']) ? $body['refid'] : null
+            ],
+            [
+                'affiliation' => true
+            ]
+        );
         
         // Send verification email
         $this -> amqp -> pub(
