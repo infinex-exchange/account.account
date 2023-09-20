@@ -64,6 +64,7 @@ class MFAAPI {
         
         $cases = [];
         foreach($this -> mapCaseToCol as $k => $v)
+            $cases[$k] => $row[$v];
         
         return [
             'cases' => $cases
