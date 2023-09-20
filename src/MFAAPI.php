@@ -165,11 +165,11 @@ class MFAAPI {
             throw new APIException(400, 'VALIDATION_ERROR', 'code_2fa');
         
         if(isset($body['code_2fa'])) {
-            if(!$this -> mfa -> response($auth['uid'], 'config2fa', 'config2fa', 'configure_'.$path['prov'], $body['code_2fa']))
+            if(!$this -> mfa -> response($auth['uid'], 'config2fa', 'config2fa', [ 'config' => $path['prov'] ], $body['code_2fa']))
                 throw new APIException(401, 'INVALID_2FA', 'Invalid 2FA code');
         }
         else {
-            $prov = $this -> mfa -> challenge($auth['uid'], 'config2fa', 'config2fa', 'configure_'.$path['prov']);
+            $prov = $this -> mfa -> challenge($auth['uid'], 'config2fa', 'config2fa', [ 'config' => $path['prov'] ]);
             if($prov != null)
                 throw new APIException(511, 'REQUIRE_2FA', $prov);
         }
@@ -217,11 +217,11 @@ class MFAAPI {
             throw new APIException(400, 'VALIDATION_ERROR', 'code_2fa');
         
         if(isset($body['code_2fa'])) {
-            if(!$this -> mfa -> response($auth['uid'], 'config2fa', 'config2fa', 'enable_'.$path['prov'], $body['code_2fa']))
+            if(!$this -> mfa -> response($auth['uid'], 'config2fa', 'config2fa', [ 'enable' => $path['prov'] ], $body['code_2fa']))
                 throw new APIException(401, 'INVALID_2FA', 'Invalid 2FA code');
         }
         else {
-            $prov = $this -> mfa -> challenge($auth['uid'], 'config2fa', 'config2fa', 'enable_'.$path['prov']);
+            $prov = $this -> mfa -> challenge($auth['uid'], 'config2fa', 'config2fa', [ 'enable' => $path['prov'] ]);
             if($prov != null)
                 throw new APIException(511, 'REQUIRE_2FA', $prov);
         }
@@ -283,11 +283,11 @@ class MFAAPI {
             throw new APIException(400, 'VALIDATION_ERROR', 'code_2fa');
         
         if(isset($body['code_2fa'])) {
-            if(!$this -> mfa -> response($auth['uid'], 'config2fa', 'config2fa', 'reset_'.$path['prov'], $body['code_2fa']))
+            if(!$this -> mfa -> response($auth['uid'], 'config2fa', 'config2fa', [ 'reset' => $path['prov'] ], $body['code_2fa']))
                 throw new APIException(401, 'INVALID_2FA', 'Invalid 2FA code');
         }
         else {
-            $prov = $this -> mfa -> challenge($auth['uid'], 'config2fa', 'config2fa', 'reset_'.$path['prov']);
+            $prov = $this -> mfa -> challenge($auth['uid'], 'config2fa', 'config2fa', [ 'reset' => $path['prov'] ]);
             if($prov != null)
                 throw new APIException(511, 'REQUIRE_2FA', $prov);
         }

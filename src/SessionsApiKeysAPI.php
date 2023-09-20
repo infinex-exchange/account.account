@@ -150,7 +150,7 @@ class SessionsApiKeysAPI {
                 throw new APIException(401, 'INVALID_2FA', 'Invalid 2FA code');
         }
         else {
-            $prov = $this -> mfa -> challenge($row['uid'], 'login', 'login', null);
+            $prov = $this -> mfa -> challenge($row['uid'], 'login', 'login', []);
             if($prov != null)
                 throw new APIException(511, 'REQUIRE_2FA', $prov);
         }
