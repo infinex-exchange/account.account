@@ -202,7 +202,7 @@ class MFAAPI {
         );
         
         return [
-            'ga_qr' => $qr
+            'url' => $qr
         ];
     }
     
