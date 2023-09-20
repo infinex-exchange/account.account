@@ -44,13 +44,13 @@ class App extends Infinex\App\Daemon {
                     $this -> log,
                     $this -> amqp,
                     $this -> pdo
-                )/*,
+                ),
                 new MFAAPI(
                     $this -> log,
                     $this -> amqp,
                     $this -> pdo,
                     $this -> mfa
-                )*/
+                )
             ]
         );
         

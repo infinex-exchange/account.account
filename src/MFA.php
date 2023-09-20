@@ -78,15 +78,15 @@ class MFA {
                 ]
             );
             
-            return $row['email'];
+            return 'EMAIL:'.$row['email'];
         }
         
         else {
-            return 'Google Authenticator';
+            return 'GA';
         }
     }
     
-    function response($uid, $actionGroup, $context, $code) {
+    function response($uid, $actionGroup, $action, $context, $code) {
         $task = array(
             ':uid' => $uid
         );

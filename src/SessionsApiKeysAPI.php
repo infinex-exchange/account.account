@@ -146,16 +146,13 @@ class SessionsApiKeysAPI {
             throw new APIException(401, 'ACCOUNT_INACTIVE', 'Your account is inactive. Please check your mailbox for activation link');
         
         if(isset($body['code_2fa'])) {
-            if(! $this -> mfa -> response($row['uid'], 'login', null, $body['code_2fa']))
+            if(! $this -> mfa -> response($row['uid'], 'login', 'login', null, $body['code_2fa']))
                 throw new APIException(401, 'INVALID_2FA', 'Invalid 2FA code');
         }
         else {
             $prov = $this -> mfa -> challenge($row['uid'], 'login', 'login', null);
             if($prov != null)
-                return [
-                    'api_key' => null,
-                    'mfa_provider' => $prov
-                ];
+                throw new APIException(511, 'REQUIRE_2FA', $prov);
         }
     
         $generatedApiKey = bin2hex(random_bytes(32));
@@ -197,8 +194,7 @@ class SessionsApiKeysAPI {
         $q -> execute($task);
         
         return [
-            'api_key' => $generatedApiKey,
-            'mfa_provider' => null
+            'api_key' => $generatedApiKey
         ];
     }
     
