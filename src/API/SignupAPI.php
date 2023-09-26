@@ -2,62 +2,57 @@
 
 require_once __DIR__.'/validate.php';
 
-use Infinex\API\APIException;
+use Infinex\Exceptions\Error;
 use Gregwar\Captcha\CaptchaBuilder;
 
 class SignupAPI {
     private $log;
     private $amqp;
     private $pdo;
+    private $rest;
     
-    function __construct($log, $amqp, $pdo) {
+    function __construct($log, $amqp, $pdo, $rest) {
         $this -> log = $log;
         $this -> amqp = $amqp;
         $this -> pdo = $pdo;
+        $this -> rest = $rest;
+        
+        $this -> rest -> get('/captcha', [$this, 'getCaptcha']);
+        $this -> rest -> post('/', [$this, 'register']);
+        $this -> rest -> patch('/', [$this, 'verify']);
         
         $this -> log -> debug('Initialized sign up API');
     }
     
-    public function initRoutes($rc) {
-        $rc -> get('/captcha', [$this, 'getCaptcha']);
-        $this -> log -> debug('Registered route GET /captcha');
-        
-        $rc -> post('/', [$this, 'register']);
-        $this -> log -> debug('Registered route POST /');
-        
-        $rc -> patch('/', [$this, 'verify']);
-        $this -> log -> debug('Registered route PATCH /');
-    }
-    
     public function register($path, $query, $body, $auth) {
         if($auth)
-            throw new APIException(403, 'ALREADY_LOGGED_IN', 'Cannot register a new account while logged in');
+            throw new Error('ALREADY_LOGGED_IN', 'Cannot register a new account while logged in', 403);
         
         if(!isset($body['email']))
-            throw new APIException(400, 'MISSING_DATA', 'email');
+            throw new Error('MISSING_DATA', 'email', 400);
         if(!isset($body['password']))
-            throw new APIException(400, 'MISSING_DATA', 'password');
-        if(!isset($body['captcha_challenge']))
-            throw new APIException(400, 'MISSING_DATA', 'captcha_challenge');
-        if(!isset($body['captcha_response']))
-            throw new APIException(400, 'MISSING_DATA', 'captcha_response');
+            throw new Error('MISSING_DATA', 'password', 400);
+        if(!isset($body['captchaChallenge']))
+            throw new Error('MISSING_DATA', 'captchaChallenge', 400);
+        if(!isset($body['captchaResponse']))
+            throw new Error('MISSING_DATA', 'captchaResponse', 400);
         
         if(!validateEmail($body['email']))
-            throw new APIException(400, 'VALIDATION_ERROR', 'email');
+            throw new Error('VALIDATION_ERROR', 'email', 400);
         if(!validatePassword($body['password']))
-            throw new APIException(400, 'VALIDATION_ERROR', 'password');
-        if(!validateCaptchaChal($body['captcha_challenge']))
-            throw new APIException(400, 'VALIDATION_ERROR', 'captcha_challenge');
-        if(!validateCaptchaResp($body['captcha_response']))
-            throw new APIException(400, 'VALIDATION_ERROR', 'captcha_response');
-        if(isset($body['refid']) && !validateUintNz($body['refid']))
-            throw new APIException(400, 'VALIDATION_ERROR', 'refid');
+            throw new Error('VALIDATION_ERROR', 'password', 400);
+        if(!$this -> validateCaptchaChal($body['captchaChallenge']))
+            throw new Error('VALIDATION_ERROR', 'captchaChallenge', 400);
+        if(!$this -> validateCaptchaResp($body['captchaResponse']))
+            throw new Error('VALIDATION_ERROR', 'captchaResponse', 400);
+        if(isset($body['refid']) && !$this -> validateRefid($body['refid']))
+            throw new Error('VALIDATION_ERROR', 'refid', 400);
         
         $email = strtolower($body['email']);
         
-        $captchaReference = md5(CAPTCHA_SALT.strtolower($body['captcha_response']).$email);
-        if($captchaReference != $body['captcha_challenge'])
-            throw new APIException(400, 'INVALID_CAPTCHA', 'Invalid captcha code');
+        $captchaReference = md5(CAPTCHA_SALT.strtolower($body['captchaResponse']).$email);
+        if($captchaReference != $body['captchaChallenge'])
+            throw new Error('INVALID_CAPTCHA', 'Invalid captcha code', 400);
         
         $hashedPassword = password_hash($body['password'], PASSWORD_DEFAULT);
         
@@ -78,7 +73,7 @@ class SignupAPI {
         
         if($row) {
             $this -> pdo -> rollBack();
-            throw new APIException(409, 'ALREADY_EXISTS', 'There is already an account registered with this email address.');
+            throw new Error('ALREADY_EXISTS', 'There is already an account registered with this email address.', 409);
         }
     
         $task = array(
@@ -132,7 +127,7 @@ class SignupAPI {
         $this -> pdo -> commit();
         
         $this -> amqp -> pub(
-            'register_user',
+            'registerUser',
             [
                 'uid' => $uid,
                 'refid' => isset($body['refid']) ? $body['refid'] : null
@@ -146,24 +141,25 @@ class SignupAPI {
         $this -> amqp -> pub(
             'mail',
             [
-                'email' => $email,
+                'uid' => $uid,
                 'template' => 'register_user',
                 'context' => [
                     'code' => $generatedCode
-                ]
+                ],
+                'email' => $email
             ]
         );
     }
     
     public function getCaptcha($path, $query, $body, $auth, $ua) {
         if($auth)
-            throw new APIException(403, 'ALREADY_LOGGED_IN', 'Already logged in');
+            throw new Error('ALREADY_LOGGED_IN', 'Already logged in', 403);
         
         if(!isset($query['email']))
-            throw new APIException(400, 'MISSING_DATA', 'email');
+            throw new Error('MISSING_DATA', 'email', 400);
         
         if(!validateEmail($query['email']))
-            throw new APIException(400, 'VALIDATION_ERROR', 'email');
+            throw new Error('VALIDATION_ERROR', 'email', 400);
         
         $email = strtolower($query['email']);
         
@@ -179,17 +175,17 @@ class SignupAPI {
     
     public function verify($path, $query, $body, $auth, $ua) {
         if($auth)
-            throw new APIException(403, 'ALREADY_LOGGED_IN', 'Already logged in');
+            throw new Error('ALREADY_LOGGED_IN', 'Already logged in', 403);
         
         if(!isset($body['email']))
-            throw new APIException(400, 'MISSING_DATA', 'email');
+            throw new Error('MISSING_DATA', 'email', 400);
         if(!isset($body['code']))
-            throw new APIException(400, 'MISSING_DATA', 'code');
+            throw new Error('MISSING_DATA', 'code', 400);
         
         if(!validateEmail($body['email']))
-            throw new APIException(400, 'VALIDATION_ERROR', 'email');
+            throw new Error('VALIDATION_ERROR', 'email', 400);
         if(!validateVeriCode($body['code']))
-            throw new APIException(400, 'VALIDATION_ERROR', 'code');
+            throw new Error('VALIDATION_ERROR', 'code', 400);
         
         $email = strtolower($body['email']);
         
@@ -216,7 +212,7 @@ class SignupAPI {
         
         if(! $row) {
             $this -> pdo -> rollBack();
-            throw new APIException(401, 'INVALID_VERIFICATION_CODE', 'Invalid verification code');
+            throw new Error('INVALID_VERIFICATION_CODE', 'Invalid verification code', 401);
         }
         $uid = $row['uid'];
         
@@ -241,6 +237,20 @@ class SignupAPI {
         $q -> execute($task);
         
         $this -> pdo -> commit();
+    }
+    
+    private function validateCaptchaChal($captcha) {
+        return preg_match('/^[a-f0-9]{32}$/', $captcha);
+    }
+
+    private function validateCaptchaResp($captcha) {
+        return preg_match('/^[a-np-zA-NP-Z1-9]{4}$/', $captcha);
+    }
+
+    private function validateRefid($refid) {
+        if(!is_int($refid)) return false;
+        if($refid < 1) return false;
+        return true;
     }
 }
 

@@ -14,38 +14,9 @@ function validatePassword($pw) {
     return true;
 }
 
-// used here
-
 function validateVeriCode($code) {
     return preg_match('/^[0-9]{6}$/', $code);
 }
-
-function validateCaptchaChal($captcha) {
-    return preg_match('/^[a-f0-9]{32}$/', $captcha);
-}
-
-function validateCaptchaResp($captcha) {
-    return preg_match('/^[a-np-zA-NP-Z1-9]{4}$/', $captcha);
-}
-
-function validateApiKey($apiKey) {
-    return preg_match('/^[a-f0-9]{64}$/', $apiKey);
-}
-
-function validateApiKeyDescription($desc) {
-    return preg_match('/^[a-zA-Z0-9 ]{1,255}$/', $desc);
-}
-
-function validate2FA($code) {
-    return preg_match('/^[0-9]{6}$/', $code);
-}
-
-function validateUint($uint) {
-    if(!is_int($uint)) return false;
-    if($uint < 0) return false;
-    return true;
-}
-
 
 
 ?>

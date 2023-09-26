@@ -5,8 +5,8 @@ require __DIR__.'/Sessions.php';
 require __DIR__.'/MFA.php';
 
 require __DIR__.'/API/MFAAPI.php';
-require __DIR__.'/Signup.php';
-require __DIR__.'/Sessions.php';
+require __DIR__.'/API/SessionsAPI.php';
+require __DIR__.'/API/SignupAPI.php';
 require __DIR__.'/Password.php';
 require __DIR__.'/Email.php';
 
@@ -22,8 +22,7 @@ class App extends Infinex\App\App {
     private $rest;
     private $mfaApi;
     private $sessionsApi;
-    private $password;
-    private $email;
+    private $signupApi;
     
     function __construct() {
         parent::__construct('account.accountd');
@@ -74,10 +73,11 @@ class App extends Infinex\App\App {
             $this -> mfa
         );
         
-        $this -> email = new Email(
+        $this -> signupApi = new SignupAPI(
             $this -> log,
             $this -> amqp,
-            $this -> pdo
+            $this -> pdo,
+            $this -> rest
         );
     }
     
