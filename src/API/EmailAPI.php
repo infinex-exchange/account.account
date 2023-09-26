@@ -24,7 +24,7 @@ class EmailAPI {
         $this -> log -> debug('Initialized email API');
     }
     
-    public function getEmail($path, $query, $body, $auth, $ua) {
+    public function getEmail($path, $query, $body, $auth) {
         if(!$auth)
             throw new Error('UNAUTHORIZED', 'Unauthorized', 401);
         
@@ -60,7 +60,7 @@ class EmailAPI {
         ];
     }
     
-    public function changeEmail($path, $query, $body, $auth, $ua) {
+    public function changeEmail($path, $query, $body, $auth) {
         if(!$auth)
             throw new Error('UNAUTHORIZED', 'Unauthorized', 401);
         
@@ -164,7 +164,7 @@ class EmailAPI {
         );
     }
     
-    public function confirmChangeEmail($path, $query, $body, $auth, $ua) {
+    public function confirmChangeEmail($path, $query, $body, $auth) {
         if(!$auth)
             throw new Error('UNAUTHORIZED', 'Unauthorized', 401);
         
@@ -230,7 +230,7 @@ class EmailAPI {
         $this -> pdo -> commit();
     }
     
-    public function cancelChangeEmail($path, $query, $body, $auth, $ua) {
+    public function cancelChangeEmail($path, $query, $body, $auth) {
         if(!$auth)
             throw new Error('UNAUTHORIZED', 'Unauthorized', 401);
         

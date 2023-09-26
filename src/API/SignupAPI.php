@@ -151,7 +151,7 @@ class SignupAPI {
         );
     }
     
-    public function getCaptcha($path, $query, $body, $auth, $ua) {
+    public function getCaptcha($path, $query, $body, $auth) {
         if($auth)
             throw new Error('ALREADY_LOGGED_IN', 'Already logged in', 403);
         
@@ -173,7 +173,7 @@ class SignupAPI {
         ];
     }
     
-    public function verify($path, $query, $body, $auth, $ua) {
+    public function verify($path, $query, $body, $auth) {
         if($auth)
             throw new Error('ALREADY_LOGGED_IN', 'Already logged in', 403);
         

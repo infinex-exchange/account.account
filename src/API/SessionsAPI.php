@@ -31,7 +31,7 @@ class SessionsAPI {
         $this -> log -> debug('Initialized sessions/api keys API');
     }
     
-    public function getAllSessions($path, $query, $body, $auth, $ua) {
+    public function getAllSessions($path, $query, $body, $auth) {
         if(!$auth)
             throw new Error('UNAUTHORIZED', 'Unauthorized', 401);
             
@@ -167,7 +167,7 @@ class SessionsAPI {
         ];
     }
     
-    public function getSession($path, $query, $body, $auth, $ua) {
+    public function getSession($path, $query, $body, $auth) {
         if(!$auth)
             throw new Error('UNAUTHORIZED', 'Unauthorized', 401);
         
@@ -209,7 +209,7 @@ class SessionsAPI {
         ];
     }
     
-    public function killSession($path, $query, $body, $auth, $ua) {
+    public function killSession($path, $query, $body, $auth) {
         if(!$auth)
             throw new Error('UNAUTHORIZED', 'Unauthorized', 401);
         
@@ -238,7 +238,7 @@ class SessionsAPI {
             throw new Error('NOT_FOUND', 'Session '.$path['sid'].' not found', 404);
     }
     
-    public function getAllApiKeys($path, $query, $body, $auth, $ua) {
+    public function getAllApiKeys($path, $query, $body, $auth) {
         if(!$auth)
             throw new Error('UNAUTHORIZED', 'Unauthorized', 401);
         
@@ -280,7 +280,7 @@ class SessionsAPI {
         ];
     }
     
-    public function getApiKey($path, $query, $body, $auth, $ua) {
+    public function getApiKey($path, $query, $body, $auth) {
         if(!$auth)
             throw new Error('UNAUTHORIZED', 'Unauthorized', 401);
         
@@ -315,7 +315,7 @@ class SessionsAPI {
         ];
     }
     
-    public function deleteApiKey($path, $query, $body, $auth, $ua) {
+    public function deleteApiKey($path, $query, $body, $auth) {
         if(!$auth)
             throw new Error('UNAUTHORIZED', 'Unauthorized', 401);
         
@@ -341,7 +341,7 @@ class SessionsAPI {
             throw new Error('NOT_FOUND', 'API key '.$path['keyid'].' not found', 404);
     }
     
-    public function addApiKey($path, $query, $body, $auth, $ua) {
+    public function addApiKey($path, $query, $body, $auth) {
         if(!$auth)
             throw new Error('UNAUTHORIZED', 'Unauthorized', 401);
         
@@ -402,12 +402,12 @@ class SessionsAPI {
         ];
     }
     
-    public function editApiKey($path, $query, $body, $auth, $ua) {
+    public function editApiKey($path, $query, $body, $auth) {
         if(!$auth)
             throw new Error('UNAUTHORIZED', 'Unauthorized', 401);
         
         if(!isset($body['description']))
-            throw new APIException('MISSING_DATA', 'description', 400);
+            throw new Error('MISSING_DATA', 'description', 400);
         
         if(!$this -> validateSid($path['keyid']))
             throw new Error('VALIDATION_ERROR', 'keyid', 400);

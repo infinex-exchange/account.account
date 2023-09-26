@@ -23,7 +23,7 @@ class PasswordAPI {
         $this -> log -> debug('Initialized password API');
     }
     
-    public function changePassword($path, $query, $body, $auth, $ua) {
+    public function changePassword($path, $query, $body, $auth) {
         if(!$auth)
             throw new Error('UNAUTHORIZED', 'Unauthorized', 401);
         
@@ -70,7 +70,7 @@ class PasswordAPI {
         $q -> execute($task);
     }
     
-    public function resetPassword($path, $query, $body, $auth, $ua) {
+    public function resetPassword($path, $query, $body, $auth) {
         if($auth)
             throw new Error('ALREADY_LOGGED_IN', 'Already logged in', 403);
         
@@ -132,7 +132,7 @@ class PasswordAPI {
         );
     }
     
-    public function confirmResetPassword($path, $query, $body, $auth, $ua) {
+    public function confirmResetPassword($path, $query, $body, $auth) {
         if($auth)
             throw new Error('ALREADY_LOGGED_IN', 'Already logged in', 403);
         
