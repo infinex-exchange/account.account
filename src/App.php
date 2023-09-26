@@ -21,6 +21,7 @@ class App extends Infinex\App\App {
     
     private $rest;
     private $mfaApi;
+    private $sessionsApi;
     private $password;
     private $email;
     
@@ -66,9 +67,11 @@ class App extends Infinex\App\App {
             $this -> mfa
         );
         
-        $this -> password = new Password(
+        $this -> sessionsApi = new SessionsAPI(
             $this -> log,
-            $this -> pdo
+            $this -> pdo,
+            $this -> rest,
+            $this -> mfa
         );
         
         $this -> email = new Email(

@@ -2,65 +2,43 @@
 
 require_once __DIR__.'/validate.php';
 
-use Infinex\API\APIException;
+use Infinex\Exceptions\Error;
+use Infinex\Pagination;
 use foroco\BrowserDetection;
 
-class SessionsApiKeysAPI {
+class SessionsAPI {
     private $log;
-    private $amqp;
     private $pdo;
+    private $rest;
     private $mfa;
     
-    function __construct($log, $amqp, $pdo, $mfa) {
+    function __construct($log, $pdo, $rest, $mfa) {
         $this -> log = $log;
-        $this -> amqp = $amqp;
         $this -> pdo = $pdo;
+        $this -> rest = $rest;
         $this -> mfa = $mfa;
         
+        $this -> rest -> get('/sessions', [$this, 'getAllSessions']);
+        $this -> rest -> get('/sessions/{sid}', [$this, 'getSession']);
+        $this -> rest -> delete('/sessions/{sid}', [$this, 'killSession']);
+        $this -> rest -> post('/sessions', [$this, 'login']);
+        $this -> rest -> get('/api_keys', [$this, 'getAllApiKeys']);
+        $this -> rest -> get('/api_keys/{keyid}', [$this, 'getApiKey']);
+        $this -> rest -> patch('/api_keys/{keyid}', [$this, 'editApiKey']);
+        $this -> rest -> delete('/api_keys/{keyid}', [$this, 'deleteApiKey']);
+        $this -> rest -> post('/api_keys', [$this, 'addApiKey']);
+
         $this -> log -> debug('Initialized sessions/api keys API');
-    }
-    
-    public function initRoutes($rc) {
-        $rc -> get('/sessions', [$this, 'getAllSessions']);
-        $this -> log -> debug('Registered route GET /sessions');
-        
-        $rc -> get('/sessions/{sid}', [$this, 'getSession']);
-        $this -> log -> debug('Registered route GET /sessions/{sid}');
-        
-        $rc -> delete('/sessions/{sid}', [$this, 'killSession']);
-        $this -> log -> debug('Registered route DELETE /sessions/{sid}');
-        
-        $rc -> post('/sessions', [$this, 'login']);
-        $this -> log -> debug('Registered route POST /sessions');
-        
-        $rc -> get('/api_keys', [$this, 'getAllApiKeys']);
-        $this -> log -> debug('Registered route GET /api_keys');
-        
-        $rc -> get('/api_keys/{keyid}', [$this, 'getApiKey']);
-        $this -> log -> debug('Registered route GET /api_keys/{keyid}');
-        
-        $rc -> patch('/api_keys/{keyid}', [$this, 'editApiKey']);
-        $this -> log -> debug('Registered route PATCH /api_keys/{keyid}');
-        
-        $rc -> delete('/api_keys/{keyid}', [$this, 'deleteApiKey']);
-        $this -> log -> debug('Registered route DELETE /api_keys/{keyid}');
-        
-        $rc -> post('/api_keys', [$this, 'addApiKey']);
-        $this -> log -> debug('Registered route POST /api_keys');
     }
     
     public function getAllSessions($path, $query, $body, $auth, $ua) {
         if(!$auth)
-            throw new APIException(401, 'UNAUTHORIZED', 'Unauthorized');
-        
-        if(isset($query['offset']) && !validateUint($query['offset']))
-            throw new APIException(400, 'VALIDATION_ERROR', 'offset');
-        
-        $offset = isset($query['offset']) ? $query['offset'] : 0;
+            throw new Error('UNAUTHORIZED', 'Unauthorized', 401);
+            
+        $pag = new Pagination\Offset(50, 500, $query);
         
         $task = array(
-            ':uid' => $auth['uid'],
-            ':offset' => $offset
+            ':uid' => $auth['uid']
         );
         
         $sql = "SELECT sid,
@@ -72,55 +50,48 @@ class SessionsApiKeysAPI {
                FROM sessions
                WHERE uid = :uid
                AND origin = 'WEBAPP'
-               ORDER BY sid DESC
-               LIMIT 51
-               OFFSET :offset";
+               ORDER BY sid DESC"
+             . $pag -> sql();
         
         $q = $this -> pdo -> prepare($sql);
         $q -> execute($task);
         
         $sessions = [];
-        $more = false;
         
         while($row = $q -> fetch()) {
-            if(count($sessions) == 50) {
-                $more = true;
-                break;
-            }
+            if($pag -> iter()) break;
             
             $sessions[] = [
                 'sid' => $row['sid'],
-                'lastact' => $row['wa_lastact'] ? intval($row['wa_lastact']) : null,
+                'lastAct' => $row['wa_lastact'] ? intval($row['wa_lastact']) : null,
                 'browser' => $row['wa_browser'],
                 'os' => $row['wa_os'],
                 'device' => $row['wa_device'],
-                'current_session' => ($auth['sid'] == $row['sid']) 
+                'current' => ($auth['sid'] == $row['sid']) 
             ];
         }
         
         return [
             'sessions' => $sessions,
-            'more' => $more
+            'more' => $pag -> more
         ];
     }
     
     public function login($path, $query, $body, $auth, $ua) {
         if($auth)
-            throw new APIException(403, 'ALREADY_LOGGED_IN', 'Already logged in');
+            throw new Error('ALREADY_LOGGED_IN', 'Already logged in', 403);
         
         if(!isset($body['email']))
-            throw new APIException(400, 'MISSING_DATA', 'email');
+            throw new Error('MISSING_DATA', 'email', 400);
         if(!isset($body['password']))
-            throw new APIException(400, 'MISSING_DATA', 'password');
+            throw new Error('MISSING_DATA', 'password', 400);
         
         if(!validateEmail($body['email']))
-            throw new APIException(400, 'VALIDATION_ERROR', 'email');
+            throw new Error('VALIDATION_ERROR', 'email', 400);
         if(!validatePassword($body['password']))
-            throw new APIException(400, 'VALIDATION_ERROR', 'password');
+            throw new Error('VALIDATION_ERROR', 'password', 400);
         if(isset($body['remember']) && !is_bool($body['remember']))
-            throw new APIException(400, 'VALIDATION_ERROR', 'remember');
-        if(isset($body['code_2fa']) && !validate2FA($body['code_2fa']))
-            throw new APIException(400, 'VALIDATION_ERROR', 'code_2fa');
+            throw new Error('VALIDATION_ERROR', 'remember', 400);
         
         $email = strtolower($body['email']);
         $remember = isset($body['remember']) ? $body['remember'] : false;
@@ -128,7 +99,7 @@ class SessionsApiKeysAPI {
         $task = array(
             ':email' => $email
         );
-    
+        
         $sql = 'SELECT uid,
                        password,
                        verified
@@ -140,20 +111,18 @@ class SessionsApiKeysAPI {
         $row = $q -> fetch();
         
         if(! $row || !password_verify($body['password'], $row['password']))
-            throw new APIException(401, 'LOGIN_FAILED', 'Incorrect e-mail or password');
+            throw new Error('LOGIN_FAILED', 'Incorrect e-mail or password', 401);
         
         if(! $row['verified'])
-            throw new APIException(401, 'ACCOUNT_INACTIVE', 'Your account is inactive. Please check your mailbox for activation link');
+            throw new Error('ACCOUNT_INACTIVE', 'Your account is inactive. Please check your mailbox for activation link', 401);
         
-        if(isset($body['code_2fa'])) {
-            if(! $this -> mfa -> response($row['uid'], 'login', 'login', null, $body['code_2fa']))
-                throw new APIException(401, 'INVALID_2FA', 'Invalid 2FA code');
-        }
-        else {
-            $prov = $this -> mfa -> challenge($row['uid'], 'login', 'login', []);
-            if($prov != null)
-                throw new APIException(511, 'REQUIRE_2FA', $prov);
-        }
+        $this -> mfa -> mfa(
+            $auth['uid'],
+            'login',
+            'login',
+            null,
+            isset($body['code2FA']) ? $body['code2FA'] : null
+        );
     
         $generatedApiKey = bin2hex(random_bytes(32));
         
@@ -194,19 +163,19 @@ class SessionsApiKeysAPI {
         $q -> execute($task);
         
         return [
-            'api_key' => $generatedApiKey
+            'apiKey' => $generatedApiKey
         ];
     }
     
     public function getSession($path, $query, $body, $auth, $ua) {
         if(!$auth)
-            throw new APIException(401, 'UNAUTHORIZED', 'Unauthorized');
+            throw new Error('UNAUTHORIZED', 'Unauthorized', 401);
         
         if($path['sid'] == 'current')
             $path['sid'] = $auth['sid'];
         
-        if(!validateUintNz($path['sid']))
-            throw new APIException(400, 'VALIDATION_ERROR', 'sid');
+        if(!$this -> validateSid($path['sid']))
+            throw new Error('VALIDATION_ERROR', 'sid', 400);
         
         $task = array(
             ':uid' => $auth['uid'],
@@ -228,27 +197,27 @@ class SessionsApiKeysAPI {
         $row = $q -> fetch();
         
         if(!$row)
-            throw new APIException(404, 'NOT_FOUND', 'Session '.$path['sid'].' not found');
+            throw new Error('NOT_FOUND', 'Session '.$path['sid'].' not found', 404);
         
         return [
             'sid' => $path['sid'],
-            'lastact' => $row['wa_lastact'] ? intval($row['wa_lastact']) : null,
+            'lastAct' => $row['wa_lastact'] ? intval($row['wa_lastact']) : null,
             'browser' => $row['wa_browser'],
             'os' => $row['wa_os'],
             'device' => $row['wa_device'],
-            'current_session' => ($auth['sid'] == $path['sid'])
+            'current' => ($auth['sid'] == $path['sid'])
         ];
     }
     
     public function killSession($path, $query, $body, $auth, $ua) {
         if(!$auth)
-            throw new APIException(401, 'UNAUTHORIZED', 'Unauthorized');
+            throw new Error('UNAUTHORIZED', 'Unauthorized', 401);
         
         if($path['sid'] == 'current')
             $path['sid'] = $auth['sid'];
         
-        if(!validateUintNz($path['sid']))
-            throw new APIException(400, 'VALIDATION_ERROR', 'sid');
+        if(!$this -> validateSid($path['sid']))
+            throw new Error('VALIDATION_ERROR', 'sid', 400);
         
         $task = array(
             ':uid' => $auth['uid'],
@@ -266,21 +235,17 @@ class SessionsApiKeysAPI {
         $row = $q -> fetch();
         
         if(!$row)
-            throw new APIException(404, 'NOT_FOUND', 'Session '.$path['sid'].' not found');
+            throw new Error('NOT_FOUND', 'Session '.$path['sid'].' not found', 404);
     }
     
     public function getAllApiKeys($path, $query, $body, $auth, $ua) {
         if(!$auth)
-            throw new APIException(401, 'UNAUTHORIZED', 'Unauthorized');
+            throw new Error('UNAUTHORIZED', 'Unauthorized', 401);
         
-        if(isset($query['offset']) && !validateUint($query['offset']))
-            throw new APIException(400, 'VALIDATION_ERROR', 'offset');
-        
-        $offset = isset($query['offset']) ? $query['offset'] : 0;
+        $pag = new Pagination\Offset(50, 500, $query);
         
         $task = array(
-            ':uid' => $auth['uid'],
-            ':offset' => $offset
+            ':uid' => $auth['uid']
         );
         
         $sql = "SELECT sid,
@@ -290,42 +255,37 @@ class SessionsApiKeysAPI {
                FROM sessions
                WHERE uid = :uid
                AND origin = 'API'
-               ORDER BY sid DESC
-               LIMIT 51
-               OFFSET :offset";
+               ORDER BY sid DESC"
+             . $pag -> sql();
         
         $q = $this -> pdo -> prepare($sql);
         $q -> execute($task);
         
         $apiKeys = [];
-        $more = false;
         
         while($row = $q -> fetch()) {
-            if(count($apiKeys) == 50) {
-                $more = true;
-                break;
-            }
+            if($pag -> iter()) break;
             
             $apiKeys[] = [
                 'keyid' => $row['sid'],
-                'api_key' => $row['api_key'],
+                'apiKey' => $row['api_key'],
                 'description' => $row['ak_description'],
-                'lastact' => $row['wa_lastact'] ? intval($row['wa_lastact']) : null
+                'lastAct' => $row['wa_lastact'] ? intval($row['wa_lastact']) : null
             ];
         }
         
         return [
-            'api_keys' => $apiKeys,
-            'more' => $more
+            'apiKeys' => $apiKeys,
+            'more' => $pag -> more
         ];
     }
     
     public function getApiKey($path, $query, $body, $auth, $ua) {
         if(!$auth)
-            throw new APIException(401, 'UNAUTHORIZED', 'Unauthorized');
+            throw new Error('UNAUTHORIZED', 'Unauthorized', 401);
         
-        if(!validateUintNz($path['keyid']))
-            throw new APIException(400, 'VALIDATION_ERROR', 'keyid');
+        if(!$this -> validateSid($path['keyid']))
+            throw new Error('VALIDATION_ERROR', 'keyid', 400);
         
         $task = array(
             ':uid' => $auth['uid'],
@@ -345,22 +305,22 @@ class SessionsApiKeysAPI {
         $row = $q -> fetch();
         
         if(!$row)
-            throw new APIException(404, 'NOT_FOUND', 'API key '.$path['keyid'].' not found');
+            throw new Error('NOT_FOUND', 'API key '.$path['keyid'].' not found', 404);
         
         return [
              'keyid' => $path['keyid'],
-             'api_key' => $row['api_key'],
+             'apiKey' => $row['api_key'],
              'description' => $row['ak_description'],
-             'lastact' => $row['wa_lastact'] ? intval($row['wa_lastact']) : null
+             'lastAct' => $row['wa_lastact'] ? intval($row['wa_lastact']) : null
         ];
     }
     
     public function deleteApiKey($path, $query, $body, $auth, $ua) {
         if(!$auth)
-            throw new APIException(401, 'UNAUTHORIZED', 'Unauthorized');
+            throw new Error('UNAUTHORIZED', 'Unauthorized', 401);
         
-        if(!validateUintNz($path['keyid']))
-            throw new APIException(400, 'VALIDATION_ERROR', 'keyid');
+        if(!$this -> validateSid($path['keyid']))
+            throw new Error('VALIDATION_ERROR', 'keyid', 400);
         
         $task = array(
             ':uid' => $auth['uid'],
@@ -378,18 +338,18 @@ class SessionsApiKeysAPI {
         $row = $q -> fetch();
         
         if(!$row)
-            throw new APIException(404, 'NOT_FOUND', 'API key '.$path['keyid'].' not found');
+            throw new Error('NOT_FOUND', 'API key '.$path['keyid'].' not found', 404);
     }
     
     public function addApiKey($path, $query, $body, $auth, $ua) {
         if(!$auth)
-            throw new APIException(401, 'UNAUTHORIZED', 'Unauthorized');
+            throw new Error('UNAUTHORIZED', 'Unauthorized', 401);
         
         if(!isset($body['description']))
-            throw new APIException(400, 'MISSING_DATA', 'description');
+            throw new Error('MISSING_DATA', 'description', 400);
         
-        if(!validateApiKeyDescription($body['description']))
-            throw new APIException(400, 'VALIDATION_ERROR', 'description');
+        if(!$this -> validateApiKeyDescription($body['description']))
+            throw new Error('VALIDATION_ERROR', 'description', 400);
     
         // Check api key with this name already exists
         $task = array(
@@ -408,7 +368,7 @@ class SessionsApiKeysAPI {
         $row = $q -> fetch();
         
         if($row)
-            throw new APIException(409, 'ALREADY_EXISTS', 'API key with this name already exists');
+            throw new Error('ALREADY_EXISTS', 'API key with this name already exists', 409);
         
         // Generate and insert api key
         $generatedApiKey = bin2hex(random_bytes(32));
@@ -438,21 +398,21 @@ class SessionsApiKeysAPI {
         
         return [
             'keyid' => $row['sid'],
-            'api_key' => $generatedApiKey
+            'apiKey' => $generatedApiKey
         ];
     }
     
     public function editApiKey($path, $query, $body, $auth, $ua) {
         if(!$auth)
-            throw new APIException(401, 'UNAUTHORIZED', 'Unauthorized');
+            throw new Error('UNAUTHORIZED', 'Unauthorized', 401);
         
         if(!isset($body['description']))
-            throw new APIException(400, 'MISSING_DATA', 'description');
+            throw new APIException('MISSING_DATA', 'description', 400);
         
-        if(!validateUintNz($path['keyid']))
-            throw new APIException(400, 'VALIDATION_ERROR', 'keyid');
-        if(!validateApiKeyDescription($body['description']))
-            throw new APIException(400, 'VALIDATION_ERROR', 'description');
+        if(!$this -> validateSid($path['keyid']))
+            throw new Error('VALIDATION_ERROR', 'keyid', 400);
+        if(!$this -> validateApiKeyDescription($body['description']))
+            throw new Error('VALIDATION_ERROR', 'description', 400);
     
         // Check api key with this name already exists
         $task = array(
@@ -473,7 +433,7 @@ class SessionsApiKeysAPI {
         if($row) {
             if($row['sid'] == $path['keyid'])
                 return;
-            throw new APIException(409, 'ALREADY_EXISTS', 'API key with this name already exists');
+            throw new Error('ALREADY_EXISTS', 'API key with this name already exists', 409);
         }
         
         // Update api key
@@ -495,7 +455,17 @@ class SessionsApiKeysAPI {
         $row = $q -> fetch();
         
         if(!$row)
-            throw new APIException(404, 'NOT_FOUND', 'API key '.$path['keyid'].' not found');
+            throw new Error('NOT_FOUND', 'API key '.$path['keyid'].' not found', 404);
+    }
+    
+    private function validateSid($sid) {
+        if(!is_int($sid)) return false;
+        if($sid < 1) return false;
+        return true;
+    }
+    
+    private function validateApiKeyDescription($desc) {
+        return preg_match('/^[a-zA-Z0-9 ]{1,255}$/', $desc);
     }
 }
 

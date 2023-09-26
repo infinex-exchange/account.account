@@ -20,12 +20,12 @@ class MFAAPI {
         $this -> rest = $rest;
         $this -> mfa = $mfa;
         
-        $rc -> get('/2fa/cases', [$this, 'getCases']);
-        $rc -> patch('/2fa/cases', [$this, 'updateCases']);
-        $rc -> get('/2fa/providers', [$this, 'getProviders']);
-        $rc -> put('/2fa/providers/{prov}', [$this, 'configureProvider']);
-        $rc -> post('/2fa/providers/{prov}', [$this, 'enableProvider']);
-        $rc -> delete('/2fa/providers/{prov}', [$this, 'resetProvider']);
+        $this -> rest -> get('/2fa/cases', [$this, 'getCases']);
+        $this -> rest -> patch('/2fa/cases', [$this, 'updateCases']);
+        $this -> rest -> get('/2fa/providers', [$this, 'getProviders']);
+        $this -> rest -> put('/2fa/providers/{prov}', [$this, 'configureProvider']);
+        $this -> rest -> post('/2fa/providers/{prov}', [$this, 'enableProvider']);
+        $this -> rest -> delete('/2fa/providers/{prov}', [$this, 'resetProvider']);
         
         $this -> log -> debug('Initialized MFA API');
     }
@@ -77,7 +77,7 @@ class MFAAPI {
             'config2fa',
             'config2fa',
             $body['cases'],
-            isset($body['code_2fa']) ? $body['code_2fa'] : null
+            isset($body['code2FA']) ? $body['code2FA'] : null
         );
         
         $task = array(
@@ -146,7 +146,7 @@ class MFAAPI {
             'config2fa',
             'config2fa',
             [ 'config' => $path['prov'] ],
-            isset($body['code_2fa']) ? $body['code_2fa'] : null
+            isset($body['codeFA']) ? $body['codeFA'] : null
         );
         
         $google2fa = new Google2FA();
@@ -193,7 +193,7 @@ class MFAAPI {
             'config2fa',
             'config2fa',
             [ 'enable' => $path['prov'] ],
-            isset($body['code_2fa']) ? $body['code_2fa'] : null
+            isset($body['code2FA']) ? $body['code2FA'] : null
         );
         
         $this -> pdo -> beginTransaction();
@@ -254,7 +254,7 @@ class MFAAPI {
             'config2fa',
             'config2fa',
             [ 'reset' => $path['prov'] ],
-            isset($body['code_2fa']) ? $body['code_2fa'] : null
+            isset($body['code2FA']) ? $body['code2FA'] : null
         );
         
         $task = array(

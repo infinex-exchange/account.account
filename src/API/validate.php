@@ -14,6 +14,8 @@ function validatePassword($pw) {
     return true;
 }
 
+// used here
+
 function validateVeriCode($code) {
     return preg_match('/^[0-9]{6}$/', $code);
 }
@@ -44,10 +46,6 @@ function validateUint($uint) {
     return true;
 }
 
-function validateUintNz($uint) {
-    if(!is_int($uint)) return false;
-    if($uint < 1) return false;
-    return true;
-}
+
 
 ?>
