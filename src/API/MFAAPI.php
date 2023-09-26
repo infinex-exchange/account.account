@@ -6,7 +6,6 @@ use PragmaRX\Google2FA\Google2FA;
 class MFAAPI {
     private $log;
     private $pdo;
-    private $rest;
     private $mfa;
     
     private $mapCaseToCol = [
@@ -14,20 +13,21 @@ class MFAAPI {
         'WITHDRAWAL' => 'for_withdraw_2fa'
     ];
     
-    function __construct($log, $pdo, $rest, $mfa) {
+    function __construct($log, $pdo, $mfa) {
         $this -> log = $log;
         $this -> pdo = $pdo;
-        $this -> rest = $rest;
         $this -> mfa = $mfa;
         
-        $this -> rest -> get('/2fa/cases', [$this, 'getCases']);
-        $this -> rest -> patch('/2fa/cases', [$this, 'updateCases']);
-        $this -> rest -> get('/2fa/providers', [$this, 'getProviders']);
-        $this -> rest -> put('/2fa/providers/{prov}', [$this, 'configureProvider']);
-        $this -> rest -> post('/2fa/providers/{prov}', [$this, 'enableProvider']);
-        $this -> rest -> delete('/2fa/providers/{prov}', [$this, 'resetProvider']);
-        
         $this -> log -> debug('Initialized MFA API');
+    }
+    
+    public function initRoutes($rc) {
+        $rc -> get('/2fa/cases', [$this, 'getCases']);
+        $rc -> patch('/2fa/cases', [$this, 'updateCases']);
+        $rc -> get('/2fa/providers', [$this, 'getProviders']);
+        $rc -> put('/2fa/providers/{prov}', [$this, 'configureProvider']);
+        $rc -> post('/2fa/providers/{prov}', [$this, 'enableProvider']);
+        $rc -> delete('/2fa/providers/{prov}', [$this, 'resetProvider']);
     }
     
     public function getCases($path, $query, $body, $auth) {

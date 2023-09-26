@@ -19,12 +19,12 @@ class App extends Infinex\App\App {
     private $sessions;
     private $mfa;
     
-    private $rest;
     private $mfaApi;
     private $sessionsApi;
     private $signupApi;
     private $passwordApi;
     private $emailApi;
+    private $rest;
     
     function __construct() {
         parent::__construct('account.accountd');
@@ -56,44 +56,46 @@ class App extends Infinex\App\App {
             $this -> pdo
         );
         
-        $this -> rest = new Infinex\API\REST(
-            $this -> log,
-            $this -> amqp
-        );
-        
         $this -> mfaApi = new MFAAPI(
             $this -> log,
             $this -> pdo,
-            $this -> rest,
             $this -> mfa
         );
         
         $this -> sessionsApi = new SessionsAPI(
             $this -> log,
             $this -> pdo,
-            $this -> rest,
             $this -> mfa
         );
         
         $this -> signupApi = new SignupAPI(
             $this -> log,
             $this -> amqp,
-            $this -> pdo,
-            $this -> rest
+            $this -> pdo
         );
         
         $this -> passwordApi = new PasswordAPI(
             $this -> log,
             $this -> amqp,
-            $this -> pdo,
-            $this -> rest
+            $this -> pdo
         );
         
         $this -> emailApi = new EmailAPI(
             $this -> log,
             $this -> amqp,
-            $this -> pdo,
-            $this -> rest
+            $this -> pdo
+        );
+        
+        $this -> rest = new Infinex\API\REST(
+            $this -> log,
+            $this -> amqp,
+            [
+                $this -> mfaApi,
+                $this -> sessionsApi,
+                $this -> signupApi,
+                $this -> passwordApi,
+                $this -> emailApi
+            ]
         );
     }
     

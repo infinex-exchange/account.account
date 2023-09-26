@@ -8,20 +8,20 @@ class EmailAPI {
     private $log;
     private $amqp;
     private $pdo;
-    private $rest;
     
-    function __construct($log, $amqp, $pdo, $rest) {
+    function __construct($log, $amqp, $pdo) {
         $this -> log = $log;
         $this -> amqp = $amqp;
         $this -> pdo = $pdo;
-        $this -> rest = $rest;
-        
-        $this -> rest -> get('/email', [$this, 'getEmail']);
-        $this -> rest -> put('/email', [$this, 'changeEmail']);
-        $this -> rest -> patch('/email', [$this, 'confirmChangeEmail']);
-        $this -> rest -> delete('/email', [$this, 'cancelChangeEmail']);
         
         $this -> log -> debug('Initialized email API');
+    }
+    
+    public function initRoutes($rc) {
+        $rc -> get('/email', [$this, 'getEmail']);
+        $rc -> put('/email', [$this, 'changeEmail']);
+        $rc -> patch('/email', [$this, 'confirmChangeEmail']);
+        $rc -> delete('/email', [$this, 'cancelChangeEmail']);
     }
     
     public function getEmail($path, $query, $body, $auth) {

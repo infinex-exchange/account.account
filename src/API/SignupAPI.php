@@ -9,19 +9,19 @@ class SignupAPI {
     private $log;
     private $amqp;
     private $pdo;
-    private $rest;
     
-    function __construct($log, $amqp, $pdo, $rest) {
+    function __construct($log, $amqp, $pdo) {
         $this -> log = $log;
         $this -> amqp = $amqp;
         $this -> pdo = $pdo;
-        $this -> rest = $rest;
-        
-        $this -> rest -> get('/captcha', [$this, 'getCaptcha']);
-        $this -> rest -> post('/', [$this, 'register']);
-        $this -> rest -> patch('/', [$this, 'verify']);
         
         $this -> log -> debug('Initialized sign up API');
+    }
+    
+    public function initRoutes($rc) {
+        $rc -> get('/captcha', [$this, 'getCaptcha']);
+        $rc -> post('/', [$this, 'register']);
+        $rc -> patch('/', [$this, 'verify']);
     }
     
     public function register($path, $query, $body, $auth) {

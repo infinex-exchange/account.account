@@ -9,26 +9,26 @@ use foroco\BrowserDetection;
 class SessionsAPI {
     private $log;
     private $pdo;
-    private $rest;
     private $mfa;
     
-    function __construct($log, $pdo, $rest, $mfa) {
+    function __construct($log, $pdo, $mfa) {
         $this -> log = $log;
         $this -> pdo = $pdo;
-        $this -> rest = $rest;
         $this -> mfa = $mfa;
-        
-        $this -> rest -> get('/sessions', [$this, 'getAllSessions']);
-        $this -> rest -> get('/sessions/{sid}', [$this, 'getSession']);
-        $this -> rest -> delete('/sessions/{sid}', [$this, 'killSession']);
-        $this -> rest -> post('/sessions', [$this, 'login']);
-        $this -> rest -> get('/api_keys', [$this, 'getAllApiKeys']);
-        $this -> rest -> get('/api_keys/{keyid}', [$this, 'getApiKey']);
-        $this -> rest -> patch('/api_keys/{keyid}', [$this, 'editApiKey']);
-        $this -> rest -> delete('/api_keys/{keyid}', [$this, 'deleteApiKey']);
-        $this -> rest -> post('/api_keys', [$this, 'addApiKey']);
 
         $this -> log -> debug('Initialized sessions/api keys API');
+    }
+    
+    public function initRoutes($rc) {
+        $rc -> get('/sessions', [$this, 'getAllSessions']);
+        $rc -> get('/sessions/{sid}', [$this, 'getSession']);
+        $rc -> delete('/sessions/{sid}', [$this, 'killSession']);
+        $rc -> post('/sessions', [$this, 'login']);
+        $rc -> get('/api_keys', [$this, 'getAllApiKeys']);
+        $rc -> get('/api_keys/{keyid}', [$this, 'getApiKey']);
+        $rc -> patch('/api_keys/{keyid}', [$this, 'editApiKey']);
+        $rc -> delete('/api_keys/{keyid}', [$this, 'deleteApiKey']);
+        $rc -> post('/api_keys', [$this, 'addApiKey']);
     }
     
     public function getAllSessions($path, $query, $body, $auth) {

@@ -8,19 +8,19 @@ class PasswordAPI {
     private $log;
     private $amqp;
     private $pdo;
-    private $rest;
     
-    function __construct($log, $amqp, $pdo, $rest) {
+    function __construct($log, $amqp, $pdo) {
         $this -> log = $log;
         $this -> amqp = $amqp;
         $this -> pdo = $pdo;
-        $this -> rest = $rest;
-        
-        $this -> rest -> put('/password', [$this, 'changePassword']);
-        $this -> rest -> delete('/password', [$this, 'resetPassword']);
-        $this -> rest -> patch('/password', [$this, 'confirmResetPassword']);
         
         $this -> log -> debug('Initialized password API');
+    }
+    
+    public function initRoutes($rc) {
+        $rc -> put('/password', [$this, 'changePassword']);
+        $rc -> delete('/password', [$this, 'resetPassword']);
+        $rc -> patch('/password', [$this, 'confirmResetPassword']);
     }
     
     public function changePassword($path, $query, $body, $auth) {
