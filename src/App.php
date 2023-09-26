@@ -107,15 +107,10 @@ class App extends Infinex\App\App {
         ) -> then(
             function() use($th) {
                 return Promise\all([
-                    $th -> mfa -> start(),
-                    $th -> signup -> start(),
-                    $th -> password -> start(),
-                    $th -> email -> start()
+                    $th -> users -> start(),
+                    $th -> sessions -> start(),
+                    $th -> mfa -> start()
                 ]);
-            }
-        ) -> then(
-            function() use($th) {
-                return $th -> sessions -> start();
             }
         ) -> then(
             function() use($th) {
@@ -133,15 +128,10 @@ class App extends Infinex\App\App {
         
         $this -> rest -> stop() -> then(
             function() use($th) {
-                return $th -> sessions -> stop();
-            }
-        ) -> then(
-            function() use($th) {
                 return Promise\all([
-                    $th -> mfa -> stop(),
-                    $th -> signup -> stop(),
-                    $th -> password -> stop(),
-                    $th -> email -> stop()
+                    $th -> users -> stop(),
+                    $th -> sessions -> stop(),
+                    $th -> mfa -> stop()
                 ]);
             }
         ) -> then(

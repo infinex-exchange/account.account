@@ -1,5 +1,6 @@
 <?php
 
+use Infinex\Exceptions\Error;
 use React\Promise;
 use PragmaRX\Google2FA\Google2FA;
 

@@ -1,6 +1,7 @@
 <?php
 
 use Infinex\Exceptions\Error;
+use React\Promise;
 
 class Users {
     private $log;
