@@ -1,6 +1,10 @@
 <?php
 
+require __DIR__.'/Users.php';
+require __DIR__.'/Sessions.php';
 require __DIR__.'/MFA.php';
+
+require __DIR__.'/API/MFAAPI.php';
 require __DIR__.'/Signup.php';
 require __DIR__.'/Sessions.php';
 require __DIR__.'/Password.php';
@@ -10,10 +14,13 @@ use React\Promise;
 
 class App extends Infinex\App\App {
     private $pdo;
-    private $rest;
-    private $mfa;
-    private $signup;
+    
+    private $users;
     private $sessions;
+    private $mfa;
+    
+    private $rest;
+    private $mfaApi;
     private $password;
     private $email;
     
@@ -29,27 +36,33 @@ class App extends Infinex\App\App {
             DB_NAME
         );
         
-        $this -> rest = new Infinex\API\REST(
-            $this -> log,
-            $this -> amqp
-        );
-        
-        $this -> mfa = new MFA(
-            $this -> loop,
+        $this -> users = new Users(
             $this -> log,
             $this -> amqp,
             $this -> pdo
         );
         
-        $this -> signup = new Signup(
+        $this -> sessions = new Sessions(
             $this -> log,
+            $this -> amqp,
             $this -> pdo
         );
         
-        $this -> sessions = new Sessions(
-            $this -> loop,
+        $this -> mfa = new MFA(
+            $this -> log,
+            $this -> amqp,
+            $this -> pdo
+        );
+        
+        $this -> rest = new Infinex\API\REST(
+            $this -> log,
+            $this -> amqp
+        );
+        
+        $this -> mfaApi = new MFAAPI(
             $this -> log,
             $this -> pdo,
+            $this -> rest,
             $this -> mfa
         );
         
