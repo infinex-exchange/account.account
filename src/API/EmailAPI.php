@@ -2,38 +2,31 @@
 
 require_once __DIR__.'/validate.php';
 
-use Infinex\API\APIException;
+use Infinex\Exceptions\Error;
 
 class EmailAPI {
     private $log;
     private $amqp;
     private $pdo;
+    private $rest;
     
-    function __construct($log, $amqp, $pdo) {
+    function __construct($log, $amqp, $pdo, $rest) {
         $this -> log = $log;
         $this -> amqp = $amqp;
         $this -> pdo = $pdo;
+        $this -> rest = $rest;
+        
+        $this -> rest -> get('/email', [$this, 'getEmail']);
+        $this -> rest -> put('/email', [$this, 'changeEmail']);
+        $this -> rest -> patch('/email', [$this, 'confirmChangeEmail']);
+        $this -> rest -> delete('/email', [$this, 'cancelChangeEmail']);
         
         $this -> log -> debug('Initialized email API');
     }
     
-    public function initRoutes($rc) {
-        $rc -> get('/email', [$this, 'getEmail']);
-        $this -> log -> debug('Registered route GET /email');
-        
-        $rc -> put('/email', [$this, 'changeEmail']);
-        $this -> log -> debug('Registered route PUT /email');
-        
-        $rc -> patch('/email', [$this, 'confirmChangeEmail']);
-        $this -> log -> debug('Registered route PATCH /email');
-        
-        $rc -> delete('/email', [$this, 'cancelChangeEmail']);
-        $this -> log -> debug('Registered route DELETE /email');
-    }
-    
     public function getEmail($path, $query, $body, $auth, $ua) {
         if(!$auth)
-            throw new APIException(401, 'UNAUTHORIZED', 'Unauthorized');
+            throw new Error('UNAUTHORIZED', 'Unauthorized', 401);
         
         $task = array(
             ':uid' => $auth['uid']
@@ -63,23 +56,23 @@ class EmailAPI {
         
         return [
             'email' => $currentEmail,
-            'pending_change' => $pendingEmail
+            'pendingChange' => $pendingEmail
         ];
     }
     
     public function changeEmail($path, $query, $body, $auth, $ua) {
         if(!$auth)
-            throw new APIException(401, 'UNAUTHORIZED', 'Unauthorized');
+            throw new Error('UNAUTHORIZED', 'Unauthorized', 401);
         
-        if(!isset($body['old_password']))
-            throw new APIException(400, 'MISSING_DATA', 'old_password');
+        if(!isset($body['password']))
+            throw new Error('MISSING_DATA', 'password', 400);
         if(!isset($body['email']))
-            throw new APIException(400, 'MISSING_DATA', 'email');
+            throw new Error('MISSING_DATA', 'email', 400);
         
-        if(!validatePassword($body['old_password']))
-            throw new APIException(400, 'VALIDATION_ERROR', 'old_password');
+        if(!validatePassword($body['password']))
+            throw new Error('VALIDATION_ERROR', 'password', 400);
         if(!validateEmail($body['email']))
-            throw new APIException(400, 'VALIDATION_ERROR', 'email');
+            throw new Error('VALIDATION_ERROR', 'email', 400);
         
         $email = strtolower($body['email']);
         
@@ -96,11 +89,11 @@ class EmailAPI {
         $q -> execute($task);
         $row = $q -> fetch();
         
-        if(! $row || !password_verify($body['old_password'], $row['password']))
-            throw new APIException(401, 'INVALID_PASSWORD', 'Incorrect old password');
+        if(! $row || !password_verify($body['password'], $row['password']))
+            throw new Error('INVALID_PASSWORD', 'Incorrect password', 401);
         
         if($email == $row['email'])
-            throw new APIException(400, 'NOTHING_CHANGED', 'New e-mail is the same as old e-mail');
+            throw new Error('NOTHING_CHANGED', 'New e-mail is the same as old e-mail', 400);
         $oldEmail = $row['email'];
         
         $task = array(
@@ -116,7 +109,7 @@ class EmailAPI {
         $row = $q -> fetch();
         
         if($row)
-            throw new APIException(409, 'ALREADY_EXISTS', 'This e-mail address is already in use');
+            throw new Error('ALREADY_EXISTS', 'This e-mail address is already in use', 409);
         
         $this -> pdo -> beginTransaction();
         
@@ -160,25 +153,26 @@ class EmailAPI {
         $this -> amqp -> pub(
             'mail',
             [
-                'email' => $oldEmail,
+                'uid' => $auth['uid'],
                 'template' => 'change_email',
                 'context' => [
                     'new_email' => $email,
                     'code' => $generatedCode
-                ]
+                ],
+                'email' => $oldEmail
             ]
         );
     }
     
     public function confirmChangeEmail($path, $query, $body, $auth, $ua) {
         if(!$auth)
-            throw new APIException(401, 'UNAUTHORIZED', 'Unauthorized');
+            throw new Error('UNAUTHORIZED', 'Unauthorized', 401);
         
         if(!isset($body['code']))
-            throw new APIException(400, 'MISSING_DATA', 'code');
+            throw new Error('MISSING_DATA', 'code', 400);
         
         if(!validateVeriCode($body['code']))
-            throw new APIException(400, 'VALIDATION_ERROR', 'code');
+            throw new Error('VALIDATION_ERROR', 'code', 400);
         
         $this -> pdo -> beginTransaction();
     
@@ -199,7 +193,7 @@ class EmailAPI {
         
         if(!$row) {
             $this -> pdo -> rollBack();
-            throw new APIException(401, 'INVALID_VERIFICATION_CODE', 'Invalid verification code');
+            throw new Error('INVALID_VERIFICATION_CODE', 'Invalid verification code', 401);
         }
         $newEmail = $row['context_data'];
         
@@ -218,7 +212,7 @@ class EmailAPI {
         
         if($row) {
             $this -> pdo -> rollBack();
-            throw new APIException(409, 'ALREADY_EXISTS', 'This e-mail address is already in use');
+            throw new Error('ALREADY_EXISTS', 'This e-mail address is already in use', 409);
         }
         
         $task = array(
@@ -238,7 +232,7 @@ class EmailAPI {
     
     public function cancelChangeEmail($path, $query, $body, $auth, $ua) {
         if(!$auth)
-            throw new APIException(401, 'UNAUTHORIZED', 'Unauthorized');
+            throw new Error('UNAUTHORIZED', 'Unauthorized', 401);
         
         $task = array(
             ':uid' => $auth['uid']
@@ -254,7 +248,7 @@ class EmailAPI {
         $row = $q -> fetch();
         
         if(!$row)
-            throw new APIException(404, 'NOT_FOUND', 'No pending e-mail change');
+            throw new Error('NOT_FOUND', 'No pending e-mail change', 404);
     }
 }
 
