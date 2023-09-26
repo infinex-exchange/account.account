@@ -2,45 +2,40 @@
 
 require_once __DIR__.'/validate.php';
 
-use Infinex\API\APIException;
+use Infinex\Exceptions\Error;
 
 class PasswordAPI {
     private $log;
     private $amqp;
     private $pdo;
+    private $rest;
     
-    function __construct($log, $amqp, $pdo) {
+    function __construct($log, $amqp, $pdo, $rest) {
         $this -> log = $log;
         $this -> amqp = $amqp;
         $this -> pdo = $pdo;
+        $this -> rest = $rest;
+        
+        $this -> rest -> put('/password', [$this, 'changePassword']);
+        $this -> rest -> delete('/password', [$this, 'resetPassword']);
+        $this -> rest -> patch('/password', [$this, 'confirmResetPassword']);
         
         $this -> log -> debug('Initialized password API');
     }
     
-    public function initRoutes($rc) {
-        $rc -> put('/password', [$this, 'changePassword']);
-        $this -> log -> debug('Registered route PUT /password');
-        
-        $rc -> delete('/password', [$this, 'resetPassword']);
-        $this -> log -> debug('Registered route DELETE /password');
-        
-        $rc -> patch('/password', [$this, 'confirmResetPassword']);
-        $this -> log -> debug('Registered route PATCH /password');
-    }
-    
     public function changePassword($path, $query, $body, $auth, $ua) {
         if(!$auth)
-            throw new APIException(401, 'UNAUTHORIZED', 'Unauthorized');
+            throw new Error('UNAUTHORIZED', 'Unauthorized', 401);
         
-        if(!isset($body['old_password']))
-            throw new APIException(400, 'MISSING_DATA', 'old_password');
+        if(!isset($body['oldPassword']))
+            throw new Error('MISSING_DATA', 'oldPassword', 400);
         if(!isset($body['password']))
-            throw new APIException(400, 'MISSING_DATA', 'password');
+            throw new Error('MISSING_DATA', 'password', 400);
         
-        if(!validatePassword($body['old_password']))
-            throw new APIException(400, 'VALIDATION_ERROR', 'old_password');
+        if(!validatePassword($body['oldPassword']))
+            throw new Error('VALIDATION_ERROR', 'old_password', 400);
         if(!validatePassword($body['password']))
-            throw new APIException(400, 'VALIDATION_ERROR', 'password');
+            throw new Error('VALIDATION_ERROR', 'password', 400);
         
         $task = array(
             ':uid' => $auth['uid']
@@ -54,10 +49,10 @@ class PasswordAPI {
         $q -> execute($task);
         $row = $q -> fetch();
     
-        if(! $row || !password_verify($body['old_password'], $row['password']))
-            throw new APIException(401, 'INVALID_PASSWORD', 'Incorrect old password');
+        if(! $row || !password_verify($body['oldPassword'], $row['password']))
+            throw new Error('INVALID_PASSWORD', 'Incorrect old password', 401);
             
-        if($jreq['old_password'] == $jreq['password'])
+        if($body['oldPassword'] == $body['password'])
             return;
     
         $hashedPassword = password_hash($body['password'], PASSWORD_DEFAULT);
@@ -77,13 +72,13 @@ class PasswordAPI {
     
     public function resetPassword($path, $query, $body, $auth, $ua) {
         if($auth)
-            throw new APIException(403, 'ALREADY_LOGGED_IN', 'Already logged in');
+            throw new Error('ALREADY_LOGGED_IN', 'Already logged in', 403);
         
         if(!isset($body['email']))
-            throw new APIException(400, 'MISSING_DATA', 'email');
+            throw new Error('MISSING_DATA', 'email', 400);
         
         if(!validateEmail($body['email']))
-            throw new APIException(400, 'VALIDATION_ERROR', 'email');
+            throw new Error('VALIDATION_ERROR', 'email', 400);
         
         $email = strtolower($body['email']);
         
@@ -127,32 +122,33 @@ class PasswordAPI {
         $this -> amqp -> pub(
             'mail',
             [
-                'email' => $email,
+                'uid' => $uid,
                 'template' => 'password_reset',
                 'context' => [
                     'code' => $generatedCode
-                ]
+                ],
+                'email' => $email
             ]
         );
     }
     
     public function confirmResetPassword($path, $query, $body, $auth, $ua) {
         if($auth)
-            throw new APIException(403, 'ALREADY_LOGGED_IN', 'Already logged in');
+            throw new Error('ALREADY_LOGGED_IN', 'Already logged in', 403);
         
         if(!isset($body['email']))
-            throw new APIException(400, 'MISSING_DATA', 'email');
+            throw new Error('MISSING_DATA', 'email', 400);
         if(!isset($body['code']))
-            throw new APIException(400, 'MISSING_DATA', 'code');
+            throw new Error('MISSING_DATA', 'code', 400);
         if(!isset($body['password']))
-            throw new APIException(400, 'MISSING_DATA', 'password');
+            throw new Error('MISSING_DATA', 'password', 400);
         
         if(!validateEmail($body['email']))
-            throw new APIException(400, 'VALIDATION_ERROR', 'email');
+            throw new Error('VALIDATION_ERROR', 'email', 400);
         if(!validateVeriCode($body['code']))
-            throw new APIException(400, 'VALIDATION_ERROR', 'code');
+            throw new Error('VALIDATION_ERROR', 'code', 400);
         if(!validatePassword($body['password']))
-            throw new APIException(400, 'VALIDATION_ERROR', 'password');
+            throw new Error('VALIDATION_ERROR', 'password', 400);
         
         $email = strtolower($body['email']);
         
@@ -179,7 +175,7 @@ class PasswordAPI {
         
         if(! $row) {
             $this -> pdo -> rollBack();
-            throw new APIException(401, 'INVALID_VERIFICATION_CODE', 'Invalid verification code');
+            throw new Error('INVALID_VERIFICATION_CODE', 'Invalid verification code', 401);
         }
         $uid = $row['uid'];
         
