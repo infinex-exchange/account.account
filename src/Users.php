@@ -83,8 +83,8 @@ class Users {
     }
     
     private function validateUid($uid) {
-        if(!is_int($uint)) return false;
-        if($uint < 1) return false;
+        if(!is_int($uid)) return false;
+        if($uid < 1) return false;
         return true;
     }
 }
