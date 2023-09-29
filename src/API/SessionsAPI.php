@@ -24,11 +24,11 @@ class SessionsAPI {
         $rc -> get('/sessions/{sid}', [$this, 'getSession']);
         $rc -> delete('/sessions/{sid}', [$this, 'killSession']);
         $rc -> post('/sessions', [$this, 'login']);
-        $rc -> get('/api_keys', [$this, 'getAllApiKeys']);
-        $rc -> get('/api_keys/{keyid}', [$this, 'getApiKey']);
-        $rc -> patch('/api_keys/{keyid}', [$this, 'editApiKey']);
-        $rc -> delete('/api_keys/{keyid}', [$this, 'deleteApiKey']);
-        $rc -> post('/api_keys', [$this, 'addApiKey']);
+        $rc -> get('/api-keys', [$this, 'getAllApiKeys']);
+        $rc -> get('/api-keys/{keyid}', [$this, 'getApiKey']);
+        $rc -> patch('/api-keys/{keyid}', [$this, 'editApiKey']);
+        $rc -> delete('/api-keys/{keyid}', [$this, 'deleteApiKey']);
+        $rc -> post('/api-keys', [$this, 'addApiKey']);
     }
     
     public function getAllSessions($path, $query, $body, $auth) {
