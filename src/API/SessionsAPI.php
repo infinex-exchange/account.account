@@ -255,7 +255,7 @@ class SessionsAPI {
                FROM sessions
                WHERE uid = :uid
                AND origin = 'API'
-               ORDER BY sid DESC"
+               ORDER BY sid ASC"
              . $pag -> sql();
         
         $q = $this -> pdo -> prepare($sql);
