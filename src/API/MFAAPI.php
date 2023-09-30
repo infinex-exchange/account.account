@@ -146,7 +146,7 @@ class MFAAPI {
             null,
             'config2fa',
             [ 'config' => $path['prov'] ],
-            isset($body['codeFA']) ? $body['codeFA'] : null
+            isset($body['code2FA']) ? $body['code2FA'] : null
         );
         
         $google2fa = new Google2FA();
