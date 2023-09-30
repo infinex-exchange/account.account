@@ -74,7 +74,7 @@ class MFAAPI {
         
         $this -> mfa -> mfa(
             $auth['uid'],
-            'config2fa',
+            null,
             'config2fa',
             $body['cases'],
             isset($body['code2FA']) ? $body['code2FA'] : null
@@ -143,7 +143,7 @@ class MFAAPI {
         
         $this -> mfa -> mfa(
             $auth['uid'],
-            'config2fa',
+            null,
             'config2fa',
             [ 'config' => $path['prov'] ],
             isset($body['codeFA']) ? $body['codeFA'] : null
@@ -190,7 +190,7 @@ class MFAAPI {
         
         $this -> mfa -> mfa(
             $auth['uid'],
-            'config2fa',
+            null,
             'config2fa',
             [ 'enable' => $path['prov'] ],
             isset($body['code2FA']) ? $body['code2FA'] : null
@@ -251,7 +251,7 @@ class MFAAPI {
         
         $this -> mfa -> mfa(
             $auth['uid'],
-            'config2fa',
+            null,
             'config2fa',
             [ 'reset' => $path['prov'] ],
             isset($body['code2FA']) ? $body['code2FA'] : null
