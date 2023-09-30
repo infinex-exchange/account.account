@@ -117,7 +117,7 @@ class SessionsAPI {
             throw new Error('ACCOUNT_INACTIVE', 'Your account is inactive. Please check your mailbox for activation link', 401);
         
         $this -> mfa -> mfa(
-            $auth['uid'],
+            $row['uid'],
             'login',
             'login',
             null,

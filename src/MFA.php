@@ -88,7 +88,7 @@ class MFA {
         $sql = 'SELECT email,
                        provider_2fa';
         if($group)
-            $sql.= ', for_'.$group.'_2fa AS enabled';
+            $sql .= ', for_'.$group.'_2fa AS enabled';
         $sql .= ' FROM users
                   WHERE uid = :uid';
         
