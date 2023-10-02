@@ -19,9 +19,9 @@ class SignupAPI {
     }
     
     public function initRoutes($rc) {
-        $rc -> get('/captcha', [$this, 'getCaptcha']);
-        $rc -> post('/', [$this, 'register']);
-        $rc -> patch('/', [$this, 'verify']);
+        $rc -> get('/signup/captcha', [$this, 'getCaptcha']);
+        $rc -> post('/signup', [$this, 'register']);
+        $rc -> patch('/signup', [$this, 'verify']);
     }
     
     public function register($path, $query, $body, $auth) {
