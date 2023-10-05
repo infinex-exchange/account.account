@@ -1,4 +1,4 @@
-CREATE ROLE "account.accountd" LOGIN PASSWORD 'password';
+CREATE ROLE "account.account" LOGIN PASSWORD 'password';
 
 create table users(
     uid bigserial not null primary key,
@@ -15,8 +15,8 @@ create table users(
     for_withdraw_2fa boolean not null default false
 );
 
-GRANT SELECT, UPDATE, INSERT ON users TO "account.accountd";
-GRANT SELECT, USAGE ON SEQUENCE users_uid_seq TO "account.accountd";
+GRANT SELECT, UPDATE, INSERT ON users TO "account.account";
+GRANT SELECT, USAGE ON SEQUENCE users_uid_seq TO "account.account";
 
 create table sessions(
     sid bigserial not null primary key,
@@ -33,8 +33,8 @@ create table sessions(
     foreign key(uid) references users(uid)
 );
 
-GRANT SELECT, UPDATE, INSERT, DELETE ON sessions TO "account.accountd";
-GRANT SELECT, USAGE ON SEQUENCE sessions_sid_seq TO "account.accountd";
+GRANT SELECT, UPDATE, INSERT, DELETE ON sessions TO "account.account";
+GRANT SELECT, USAGE ON SEQUENCE sessions_sid_seq TO "account.account";
 
 create table email_codes(
     codeid bigserial not null primary key,
@@ -46,5 +46,5 @@ create table email_codes(
     foreign key(uid) references users(uid)
 );
 
-GRANT SELECT, INSERT, DELETE ON email_codes TO "account.accountd";
-GRANT SELECT, USAGE ON SEQUENCE email_codes_codeid_seq TO "account.accountd";
+GRANT SELECT, INSERT, DELETE ON email_codes TO "account.account";
+GRANT SELECT, USAGE ON SEQUENCE email_codes_codeid_seq TO "account.account";
