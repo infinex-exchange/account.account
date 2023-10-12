@@ -165,7 +165,7 @@ class Users {
                        verified,
                        EXTRACT(epoch FROM register_time) AS register_time
                        FROM users
-                ORDER BY uid DESC';
+                ORDER BY uid DESC'
               . $pag -> sql();
         
         $q = $this -> query($sql);
