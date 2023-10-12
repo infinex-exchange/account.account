@@ -31,6 +31,11 @@ class Sessions {
         
         $promises[] = $this -> amqp -> method(
             'getSessions',
+            [$this, 'getSessions']
+        );
+        
+        $promises[] = $this -> amqp -> method(
+            'getSession',
             [$this, 'getSession']
         );
         
@@ -67,6 +72,11 @@ class Sessions {
         $promises = [];
         
         $promises[] = $this -> amqp -> unreg('checkApiKey');
+        $promises[] = $this -> amqp -> unreg('getSessions');
+        $promises[] = $this -> amqp -> unreg('getSession');
+        $promises[] = $this -> amqp -> unreg('killSession');
+        $promises[] = $this -> amqp -> unreg('createSession');
+        $promises[] = $this -> amqp -> unreg('editSession');
         
         return Promise\all($promises) -> then(
             function() use ($th) {
