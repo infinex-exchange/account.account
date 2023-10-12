@@ -1,14 +1,13 @@
 <?php
 
 require __DIR__.'/Users.php';
+require __DIR__.'/VeriCodes.php';
 require __DIR__.'/Sessions.php';
-require __DIR__.'/MFA.php';
 
-require __DIR__.'/API/MFAAPI.php';
-require __DIR__.'/API/SessionsAPI.php';
 require __DIR__.'/API/SignupAPI.php';
-require __DIR__.'/API/PasswordAPI.php';
 require __DIR__.'/API/EmailAPI.php';
+require __DIR__.'/API/PasswordAPI.php';
+require __DIR__.'/API/SessionsAPI.php';
 
 use React\Promise;
 
@@ -16,14 +15,13 @@ class App extends Infinex\App\App {
     private $pdo;
     
     private $users;
+    private $vc;
     private $sessions;
-    private $mfa;
     
-    private $mfaApi;
-    private $sessionsApi;
     private $signupApi;
-    private $passwordApi;
     private $emailApi;
+    private $passwordApi;
+    private $sessionsApi;
     private $rest;
     
     function __construct() {
@@ -44,57 +42,56 @@ class App extends Infinex\App\App {
             $this -> pdo
         );
         
+        $this -> vc = new VeriCodes(
+            $this -> log,
+            $this -> pdo
+        );
+        
         $this -> sessions = new Sessions(
             $this -> log,
             $this -> amqp,
-            $this -> pdo
-        );
-        
-        $this -> mfa = new MFA(
-            $this -> log,
-            $this -> amqp,
-            $this -> pdo
-        );
-        
-        $this -> mfaApi = new MFAAPI(
-            $this -> log,
             $this -> pdo,
-            $this -> mfa
-        );
-        
-        $this -> sessionsApi = new SessionsAPI(
-            $this -> log,
-            $this -> pdo,
-            $this -> mfa
+            $this -> users
         );
         
         $this -> signupApi = new SignupAPI(
             $this -> log,
-            $this -> amqp,
-            $this -> pdo
-        );
-        
-        $this -> passwordApi = new PasswordAPI(
-            $this -> log,
-            $this -> amqp,
-            $this -> pdo
+            $this -> pdo,
+            $this -> users,
+            $this -> vc
         );
         
         $this -> emailApi = new EmailAPI(
             $this -> log,
             $this -> amqp,
-            $this -> pdo
+            $this -> pdo,
+            $this -> users,
+            $this -> vc
+        );
+        
+        $this -> passwordApi = new PasswordAPI(
+            $this -> log,
+            $this -> amqp,
+            $this -> pdo,
+            $this -> users,
+            $this -> vc
+        );
+        
+        $this -> sessionsApi = new SessionsAPI(
+            $this -> log,
+            $this -> amqp,
+            $this -> sessions
+            $this -> users
         );
         
         $this -> rest = new Infinex\API\REST(
             $this -> log,
             $this -> amqp,
             [
-                $this -> mfaApi,
-                $this -> sessionsApi,
                 $this -> signupApi,
+                $this -> emailApi,
                 $this -> passwordApi,
-                $this -> emailApi
+                $this -> sessionsApi
             ]
         );
     }
@@ -110,9 +107,12 @@ class App extends Infinex\App\App {
             function() use($th) {
                 return Promise\all([
                     $th -> users -> start(),
-                    $th -> sessions -> start(),
-                    $th -> mfa -> start()
+                    $th -> vc -> start()
                 ]);
+            }
+        ) -> then(
+            function() use($th) {
+                return $th -> sessions -> start();
             }
         ) -> then(
             function() use($th) {
@@ -130,10 +130,13 @@ class App extends Infinex\App\App {
         
         $this -> rest -> stop() -> then(
             function() use($th) {
+                return $th -> sessions -> stop();
+            }
+        ) -> then(
+            function() use($th) {
                 return Promise\all([
                     $th -> users -> stop(),
-                    $th -> sessions -> stop(),
-                    $th -> mfa -> stop()
+                    $th -> vc -> stop()
                 ]);
             }
         ) -> then(

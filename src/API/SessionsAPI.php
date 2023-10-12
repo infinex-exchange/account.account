@@ -1,20 +1,19 @@
 <?php
 
-require_once __DIR__.'/validate.php';
-
 use Infinex\Exceptions\Error;
-use Infinex\Pagination;
 use foroco\BrowserDetection;
 
 class SessionsAPI {
     private $log;
-    private $pdo;
-    private $mfa;
+    private $amqp;
+    private $sessions;
+    private $users;
     
-    function __construct($log, $pdo, $mfa) {
+    function __construct($log, $amqp, $sessions, $users) {
         $this -> log = $log;
-        $this -> pdo = $pdo;
-        $this -> mfa = $mfa;
+        $this -> amqp = $amqp;
+        $this -> sessions = $sessions;
+        $this -> users = $users;
 
         $this -> log -> debug('Initialized sessions/api keys API');
     }
@@ -35,136 +34,17 @@ class SessionsAPI {
         if(!$auth)
             throw new Error('UNAUTHORIZED', 'Unauthorized', 401);
             
-        $pag = new Pagination\Offset(50, 500, $query);
+        $resp = $this -> sessions -> getSessions([
+            'uid' => $auth['uid'],
+            'origin' => 'WEBAPP',
+            'offset' => @$body['offset'],
+            'limit' => @$body['limit']
+        ]);
         
-        $task = array(
-            ':uid' => $auth['uid']
-        );
+        foreach($resp['sessions'] as $k => $v)
+            $resp['sessions'][$k] = $this -> ptpSession($v);
         
-        $sql = "SELECT sid,
-                       wa_remember,
-                       EXTRACT(epoch FROM wa_lastact) AS wa_lastact,
-                       wa_browser,
-                       wa_os,
-                       wa_device
-               FROM sessions
-               WHERE uid = :uid
-               AND origin = 'WEBAPP'
-               ORDER BY sid DESC"
-             . $pag -> sql();
-        
-        $q = $this -> pdo -> prepare($sql);
-        $q -> execute($task);
-        
-        $sessions = [];
-        
-        while($row = $q -> fetch()) {
-            if($pag -> iter()) break;
-            
-            $sessions[] = [
-                'sid' => $row['sid'],
-                'lastAct' => $row['wa_lastact'] ? intval($row['wa_lastact']) : null,
-                'browser' => $row['wa_browser'],
-                'os' => $row['wa_os'],
-                'device' => $row['wa_device'],
-                'current' => ($auth['sid'] == $row['sid']) 
-            ];
-        }
-        
-        return [
-            'sessions' => $sessions,
-            'more' => $pag -> more
-        ];
-    }
-    
-    public function login($path, $query, $body, $auth, $ua) {
-        if($auth)
-            throw new Error('ALREADY_LOGGED_IN', 'Already logged in', 403);
-        
-        if(!isset($body['email']))
-            throw new Error('MISSING_DATA', 'email', 400);
-        if(!isset($body['password']))
-            throw new Error('MISSING_DATA', 'password', 400);
-        
-        if(!validateEmail($body['email']))
-            throw new Error('VALIDATION_ERROR', 'email', 400);
-        if(!validatePassword($body['password']))
-            throw new Error('VALIDATION_ERROR', 'password', 400);
-        if(isset($body['remember']) && !is_bool($body['remember']))
-            throw new Error('VALIDATION_ERROR', 'remember', 400);
-        
-        $email = strtolower($body['email']);
-        $remember = isset($body['remember']) ? $body['remember'] : false;
-        
-        $task = array(
-            ':email' => $email
-        );
-        
-        $sql = 'SELECT uid,
-                       password,
-                       verified
-                FROM users
-                WHERE email = :email';
-    
-        $q = $this -> pdo -> prepare($sql);
-        $q -> execute($task);
-        $row = $q -> fetch();
-        
-        if(! $row || !password_verify($body['password'], $row['password']))
-            throw new Error('LOGIN_FAILED', 'Incorrect e-mail or password', 401);
-        
-        if(! $row['verified'])
-            throw new Error('ACCOUNT_INACTIVE', 'Your account is inactive. Please check your mailbox for activation link', 401);
-        
-        $this -> mfa -> mfa(
-            $row['uid'],
-            'login',
-            'login',
-            null,
-            isset($body['code2FA']) ? $body['code2FA'] : null
-        );
-    
-        $generatedApiKey = bin2hex(random_bytes(32));
-        
-        $browserDetection = new BrowserDetection();
-        $browser = $browserDetection -> getAll($ua);
-        
-        $task = array(
-            ':uid' => $row['uid'],
-            ':api_key' => $generatedApiKey,
-            ':wa_remember' => $remember ? 1 : 0,
-            ':wa_browser' => $browser['browser_title'],
-            ':wa_os' => $browser['os_title'],
-            ':wa_device' => $browser['device_type']
-        );
-        
-        $sql = "INSERT INTO sessions (
-            uid,
-            api_key,
-            origin,
-            wa_remember,
-            wa_lastact,
-            wa_browser,
-            wa_os,
-            wa_device
-        )
-        VALUES (
-            :uid,
-            :api_key,
-            'WEBAPP',
-            :wa_remember,
-            CURRENT_TIMESTAMP,
-            :wa_browser,
-            :wa_os,
-            :wa_device
-        )";
-        
-        $q = $this -> pdo -> prepare($sql);
-        $q -> execute($task);
-        
-        return [
-            'apiKey' => $generatedApiKey
-        ];
+        return $resp;
     }
     
     public function getSession($path, $query, $body, $auth) {
@@ -174,39 +54,13 @@ class SessionsAPI {
         if($path['sid'] == 'current')
             $path['sid'] = $auth['sid'];
         
-        if(!$this -> validateSid($path['sid']))
-            throw new Error('VALIDATION_ERROR', 'sid', 400);
-        
-        $task = array(
-            ':uid' => $auth['uid'],
-            ':sid' => $path['sid']
+        return $this -> ptpSession(
+            $this -> sessions -> getSession([
+                'uid' => $auth['uid'],
+                'sid' => $path['sid'],
+                'origin' => 'WEBAPP'
+            ])
         );
-        
-        $sql = "SELECT wa_remember,
-                       EXTRACT(epoch FROM wa_lastact) AS wa_lastact,
-                       wa_browser,
-                       wa_os,
-                       wa_device
-               FROM sessions
-               WHERE uid = :uid
-               AND sid = :sid
-               AND origin = 'WEBAPP'";
-        
-        $q = $this -> pdo -> prepare($sql);
-        $q -> execute($task);
-        $row = $q -> fetch();
-        
-        if(!$row)
-            throw new Error('NOT_FOUND', 'Session '.$path['sid'].' not found', 404);
-        
-        return [
-            'sid' => $path['sid'],
-            'lastAct' => $row['wa_lastact'] ? intval($row['wa_lastact']) : null,
-            'browser' => $row['wa_browser'],
-            'os' => $row['wa_os'],
-            'device' => $row['wa_device'],
-            'current' => ($auth['sid'] == $path['sid'])
-        ];
     }
     
     public function killSession($path, $query, $body, $auth) {
@@ -216,67 +70,91 @@ class SessionsAPI {
         if($path['sid'] == 'current')
             $path['sid'] = $auth['sid'];
         
-        if(!$this -> validateSid($path['sid']))
-            throw new Error('VALIDATION_ERROR', 'sid', 400);
+        $this -> sessions -> killSession([
+            'uid' => $auth['uid'],
+            'sid' => $path['sid'],
+            'origin' => 'WEBAPP'
+        ]);
+    }
+    
+    public function login($path, $query, $body, $auth, $ua) {
+        if($auth)
+            throw new Error('ALREADY_LOGGED_IN', 'Already logged in', 403);
         
-        $task = array(
-            ':uid' => $auth['uid'],
-            ':sid' => $path['sid']
-        );
+        try {
+            $uid = $this -> users -> emailToUid([
+                'email' => @$body['email']
+            ]);
+            
+            $user = $this -> users -> getUser([
+                'uid' => $uid
+            ]);
         
-        $sql = "DELETE FROM sessions
-                WHERE uid = :uid
-                AND sid = :sid
-                AND origin = 'WEBAPP'
-                RETURNING 1";
+            $this -> users -> checkPassword([
+                'uid' => $uid,
+                'password' => @$body['password']
+            ]);
+        }
+        catch(Error $e) {
+            if($e -> getCode() == 400) // rethrow all missing data and validation errors
+                throw $e;
+            throw new Error('LOGIN_FAILED', 'Incorrect username or password', 401);
+        }
         
-        $q = $this -> pdo -> prepare($sql);
-        $q -> execute($task);
-        $row = $q -> fetch();
+        if(!$user['verified'])
+            throw new Error(
+                'ACCOUNT_INACTIVE',
+                'Your account is inactive. Please check your mailbox for activation link',
+                403
+            );
         
-        if(!$row)
-            throw new Error('NOT_FOUND', 'Session '.$path['sid'].' not found', 404);
+        return $this -> amqp -> call(
+            'account.mfa',
+            'mfa',
+            [
+                'uid' => $uid,
+                'actionGroup' => 'login',
+                'action' => 'login',
+                'context' => null,
+                'code' => @$body['code2FA']
+            ]
+        ) -> then(function() use($th, $ua, $uid, $body) {
+            $browserDetection = new BrowserDetection();
+            $browser = $browserDetection -> getAll($ua);
+            
+            $session = $th -> sessions -> createSession([
+                'uid' => $uid,
+                'origin' => 'WEBAPP',
+                'browser' => $browser['browser_title'],
+                'os' => $browser['os_title'],
+                'device' => $browser['device_type'],
+                'remember' => @$body['remember']
+            ]);
+            
+            return [
+                'apiKey' => $session['apiKey']
+            ];
+        });
     }
     
     public function getAllApiKeys($path, $query, $body, $auth) {
         if(!$auth)
             throw new Error('UNAUTHORIZED', 'Unauthorized', 401);
-        
-        $pag = new Pagination\Offset(50, 500, $query);
-        
-        $task = array(
-            ':uid' => $auth['uid']
-        );
-        
-        $sql = "SELECT sid,
-                       api_key,
-                       ak_description,
-                       EXTRACT(epoch FROM wa_lastact) AS wa_lastact
-               FROM sessions
-               WHERE uid = :uid
-               AND origin = 'API'
-               ORDER BY sid ASC"
-             . $pag -> sql();
-        
-        $q = $this -> pdo -> prepare($sql);
-        $q -> execute($task);
+            
+        $resp = $this -> sessions -> getSessions([
+            'uid' => $auth['uid'],
+            'origin' => 'API',
+            'offset' => @$body['offset'],
+            'limit' => @$body['limit']
+        ]);
         
         $apiKeys = [];
-        
-        while($row = $q -> fetch()) {
-            if($pag -> iter()) break;
-            
-            $apiKeys[] = [
-                'keyid' => $row['sid'],
-                'apiKey' => $row['api_key'],
-                'description' => $row['ak_description'],
-                'lastAct' => $row['wa_lastact'] ? intval($row['wa_lastact']) : null
-            ];
-        }
+        foreach($resp['sessions'] as $k => $v)
+            $apiKeys[$k] = $this -> ptpApiKey($v);
         
         return [
             'apiKeys' => $apiKeys,
-            'more' => $pag -> more
+            'more' => $resp['more']
         ];
     }
     
@@ -284,188 +162,51 @@ class SessionsAPI {
         if(!$auth)
             throw new Error('UNAUTHORIZED', 'Unauthorized', 401);
         
-        if(!$this -> validateSid($path['keyid']))
-            throw new Error('VALIDATION_ERROR', 'keyid', 400);
-        
-        $task = array(
-            ':uid' => $auth['uid'],
-            ':sid' => $path['keyid']
+        return $this -> ptpApiKey(
+            $this -> sessions -> getSession([
+                'uid' => $auth['uid'],
+                'sid' => $path['keyid'],
+                'origin' => 'API'
+            ])
         );
-        
-        $sql = "SELECT api_key,
-                       ak_description,
-                       EXTRACT(epoch FROM wa_lastact) AS wa_lastact
-               FROM sessions
-               WHERE uid = :uid
-               AND sid = :sid
-               AND origin = 'API'";
-        
-        $q = $this -> pdo -> prepare($sql);
-        $q -> execute($task);
-        $row = $q -> fetch();
-        
-        if(!$row)
-            throw new Error('NOT_FOUND', 'API key '.$path['keyid'].' not found', 404);
-        
-        return [
-             'keyid' => $path['keyid'],
-             'apiKey' => $row['api_key'],
-             'description' => $row['ak_description'],
-             'lastAct' => $row['wa_lastact'] ? intval($row['wa_lastact']) : null
-        ];
-    }
-    
-    public function deleteApiKey($path, $query, $body, $auth) {
-        if(!$auth)
-            throw new Error('UNAUTHORIZED', 'Unauthorized', 401);
-        
-        if(!$this -> validateSid($path['keyid']))
-            throw new Error('VALIDATION_ERROR', 'keyid', 400);
-        
-        $task = array(
-            ':uid' => $auth['uid'],
-            ':sid' => $path['keyid']
-        );
-        
-        $sql = "DELETE FROM sessions
-                WHERE uid = :uid
-                AND sid = :sid
-                AND origin = 'API'
-                RETURNING 1";
-        
-        $q = $this -> pdo -> prepare($sql);
-        $q -> execute($task);
-        $row = $q -> fetch();
-        
-        if(!$row)
-            throw new Error('NOT_FOUND', 'API key '.$path['keyid'].' not found', 404);
-    }
-    
-    public function addApiKey($path, $query, $body, $auth) {
-        if(!$auth)
-            throw new Error('UNAUTHORIZED', 'Unauthorized', 401);
-        
-        if(!isset($body['description']))
-            throw new Error('MISSING_DATA', 'description', 400);
-        
-        if(!$this -> validateApiKeyDescription($body['description']))
-            throw new Error('VALIDATION_ERROR', 'description', 400);
-    
-        // Check api key with this name already exists
-        $task = array(
-            ':uid' => $auth['uid'],
-            ':description' => $body['description']
-        );
-        
-        $sql = "SELECT sid
-                FROM sessions
-                WHERE uid = :uid
-                AND ak_description = :description
-                AND origin = 'API'";
-        
-        $q = $this -> pdo -> prepare($sql);
-        $q -> execute($task);
-        $row = $q -> fetch();
-        
-        if($row)
-            throw new Error('ALREADY_EXISTS', 'API key with this name already exists', 409);
-        
-        // Generate and insert api key
-        $generatedApiKey = bin2hex(random_bytes(32));
-        
-        $task = array(
-            ':uid' => $auth['uid'],
-            ':api_key' => $generatedApiKey,
-            ':description' => $body['description']
-        );
-        
-        $sql = "INSERT INTO sessions(
-                    uid,
-                    api_key,
-                    origin,
-                    ak_description
-                ) VALUES (
-                    :uid,
-                    :api_key,
-                    'API',
-                    :description
-                )
-                RETURNING sid";
-        
-        $q = $this -> pdo -> prepare($sql);
-        $q -> execute($task);
-        $row = $q -> fetch();
-        
-        return [
-            'keyid' => $row['sid'],
-            'apiKey' => $generatedApiKey
-        ];
     }
     
     public function editApiKey($path, $query, $body, $auth) {
         if(!$auth)
             throw new Error('UNAUTHORIZED', 'Unauthorized', 401);
         
-        if(!isset($body['description']))
-            throw new Error('MISSING_DATA', 'description', 400);
-        
-        if(!$this -> validateSid($path['keyid']))
-            throw new Error('VALIDATION_ERROR', 'keyid', 400);
-        if(!$this -> validateApiKeyDescription($body['description']))
-            throw new Error('VALIDATION_ERROR', 'description', 400);
-    
-        // Check api key with this name already exists
-        $task = array(
-            ':uid' => $auth['uid'],
-            ':description' => $body['description']
-        );
-        
-        $sql = "SELECT sid
-                FROM sessions
-                WHERE uid = :uid
-                AND ak_description = :description
-                AND origin = 'API'";
-        
-        $q = $this -> pdo -> prepare($sql);
-        $q -> execute($task);
-        $row = $q -> fetch();
-        
-        if($row) {
-            if($row['sid'] == $path['keyid'])
-                return;
-            throw new Error('ALREADY_EXISTS', 'API key with this name already exists', 409);
-        }
-        
-        // Update api key
-        $task = array(
-            ':uid' => $auth['uid'],
-            ':sid' => $path['keyid'],
-            ':description' => $body['description']
-        );
-        
-        $sql = "UPDATE sessions
-                SET ak_description = :description
-                WHERE uid = :uid
-                AND sid = :sid
-                AND origin = 'API'
-                RETURNING 1";
-        
-        $q = $this -> pdo -> prepare($sql);
-        $q -> execute($task);
-        $row = $q -> fetch();
-        
-        if(!$row)
-            throw new Error('NOT_FOUND', 'API key '.$path['keyid'].' not found', 404);
+        $this -> sessions -> editSession([
+            'uid' => $auth['uid'],
+            'sid' => $path['keyid'],
+            'description' => @$body['description']
+        ]);
     }
     
-    private function validateSid($sid) {
-        if(!is_int($sid)) return false;
-        if($sid < 1) return false;
-        return true;
+    public function deleteApiKey($path, $query, $body, $auth) {
+        if(!$auth)
+            throw new Error('UNAUTHORIZED', 'Unauthorized', 401);
+        
+        $this -> sessions -> killSession([
+            'uid' => $auth['uid'],
+            'sid' => $path['keyid'],
+            'origin' => 'API'
+        ]);
     }
     
-    private function validateApiKeyDescription($desc) {
-        return preg_match('/^[a-zA-Z0-9 ]{1,255}$/', $desc);
+    public function addApiKey($path, $query, $body, $auth) {
+        if(!$auth)
+            throw new Error('UNAUTHORIZED', 'Unauthorized', 401);
+        
+        $resp = $this -> sessions -> createSession([
+            'uid' => $auth['uid'],
+            'origin' => 'API',
+            'description' => @$body['description']
+        ]);
+        
+        return [
+            'keyid' => $resp['sid'],
+            'apiKey' => $resp['apiKey']
+        ];
     }
 }
 

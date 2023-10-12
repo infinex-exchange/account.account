@@ -5,14 +5,7 @@ create table users(
     email varchar(255) not null,
     password varchar(255) not null,
     verified boolean not null default false,
-    register_time timestamptz not null default current_timestamp,
-    spot_fees_levelid int not null default 1,
-    spot_fees_override_abs int default null,
-    spot_fees_override_rel int default null,
-    provider_2fa varchar(32) not null default 'EMAIL',
-    ga_secret_2fa varchar(16) default null,
-    for_login_2fa boolean not null default false,
-    for_withdraw_2fa boolean not null default false
+    register_time timestamptz not null default current_timestamp
 );
 
 GRANT SELECT, UPDATE, INSERT ON users TO "account.account";
