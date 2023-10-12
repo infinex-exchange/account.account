@@ -451,7 +451,7 @@ class Sessions {
             'apiKey' => $row['api_key'],
             'origin' => $row['origin'],
             'remember' => $row['wa_remember'],
-            'lastAct' => $row['wa_lastact'],
+            'lastAct' => $row['wa_lastact'] ? intval($row['wa_lastact']) : null,
             'browser' => $row['browser'],
             'os' => $row['os'],
             'device' => $row['device'],

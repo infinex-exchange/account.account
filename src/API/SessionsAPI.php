@@ -42,7 +42,7 @@ class SessionsAPI {
         ]);
         
         foreach($resp['sessions'] as $k => $v)
-            $resp['sessions'][$k] = $this -> ptpSession($v);
+            $resp['sessions'][$k] = $this -> ptpSession($v, $auth['sid']);
         
         return $resp;
     }
@@ -59,7 +59,8 @@ class SessionsAPI {
                 'uid' => $auth['uid'],
                 'sid' => $path['sid'],
                 'origin' => 'WEBAPP'
-            ])
+            ]),
+            $auth['sid']
         );
     }
     
@@ -206,6 +207,26 @@ class SessionsAPI {
         return [
             'keyid' => $resp['sid'],
             'apiKey' => $resp['apiKey']
+        ];
+    }
+    
+    private function ptpSession($record, $currentSid) {
+        return [
+            'sid' => $record['sid'],
+            'lastAct' => $record['lastAct'],
+            'browser' => $record['browser'],
+            'os' => $record['os'],
+            'device' => $record['device'],
+            'current' => ($record['sid'] == $currentSid)
+        ]; 
+    }
+    
+    private function ptpApiKey($record) {
+        return [
+            'keyid' => $record['sid'],
+            'apiKey' => $record['apiKey'],
+            'description' => $record['description'],
+            'lastAct' => $record['lastAct']
         ];
     }
 }
