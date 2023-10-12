@@ -80,7 +80,7 @@ class App extends Infinex\App\App {
         $this -> sessionsApi = new SessionsAPI(
             $this -> log,
             $this -> amqp,
-            $this -> sessions
+            $this -> sessions,
             $this -> users
         );
         
