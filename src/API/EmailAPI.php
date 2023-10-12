@@ -109,7 +109,7 @@ class EmailAPI {
         if(!$auth)
             throw new Error('UNAUTHORIZED', 'Unauthorized', 401);
         
-        if(! $this -> vc -> deletePrevCodes($auth['uid'], 'CHANGE_EMAIL']))
+        if(! $this -> vc -> deletePrevCodes($auth['uid'], 'CHANGE_EMAIL'))
             throw new Error('NOT_FOUND', 'No pending e-mail change', 404);
     }
 }
