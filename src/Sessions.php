@@ -358,7 +358,7 @@ class Sessions {
             throw new Error('VALIDATION_ERROR', 'sid', 400);
         if(!$this -> validateApiKeyDescription($body['description']))
             throw new Error('VALIDATION_ERROR', 'description', 400);
-        if(isset($body['uid'] && ! $this -> users -> validateUid($body['uid']))
+        if(isset($body['uid']) && ! $this -> users -> validateUid($body['uid']))
             throw new Error('VALIDATION_ERROR', 'uid', 400);
             
         if(isset($body['uid']))
