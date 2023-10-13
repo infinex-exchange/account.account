@@ -114,7 +114,7 @@ class SessionsAPI {
             'mfa',
             [
                 'uid' => $uid,
-                'actionGroup' => 'login',
+                'case' => 'login',
                 'action' => 'login',
                 'context' => null,
                 'code' => @$body['code2FA']
