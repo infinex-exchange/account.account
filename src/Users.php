@@ -277,7 +277,7 @@ class Users {
                 'refid' => @$body['refid']
             ],
             [
-                'affiliation' => true
+                'affiliation' => isset($body['refid'])
             ]
         );
         
