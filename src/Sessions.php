@@ -463,9 +463,9 @@ class Sessions {
             'origin' => $row['origin'],
             'remember' => $row['wa_remember'],
             'lastAct' => $row['wa_lastact'] ? intval($row['wa_lastact']) : null,
-            'browser' => $row['browser'],
-            'os' => $row['os'],
-            'device' => $row['device'],
+            'browser' => $row['wa_browser'],
+            'os' => $row['wa_os'],
+            'device' => $row['wa_device'],
             'description' => $row['ak_description']
         ];
     }
