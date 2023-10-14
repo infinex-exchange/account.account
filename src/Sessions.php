@@ -342,6 +342,7 @@ class Sessions {
                     :api_key,
                     :origin,
                     :wa_remember,
+                    :wa_browser,
                     :wa_os,
                     :wa_device,
                     :ak_description
