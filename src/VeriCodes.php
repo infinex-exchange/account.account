@@ -65,7 +65,7 @@ class VeriCodes {
         $task = array(
             ':uid' => $uid,
             ':context' => $context,
-            ':code' => $generatedCode
+            ':code' => $code
         );
         if($contextData)
             $task[':context_data'] = $contextData;
