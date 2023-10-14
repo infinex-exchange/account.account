@@ -79,6 +79,8 @@ class SessionsAPI {
     }
     
     public function login($path, $query, $body, $auth, $ua) {
+        $th = $this;
+        
         if($auth)
             throw new Error('ALREADY_LOGGED_IN', 'Already logged in', 403);
         
