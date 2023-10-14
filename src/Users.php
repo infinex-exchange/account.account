@@ -8,11 +8,13 @@ class Users {
     private $log;
     private $amqp;
     private $pdo;
+    private $vc;
     
     function __construct($log, $amqp, $pdo) {
         $this -> log = $log;
         $this -> amqp = $amqp;
         $this -> pdo = $pdo;
+        $this -> vc = $vc;
         
         $this -> log -> debug('Initialized users manager');
     }

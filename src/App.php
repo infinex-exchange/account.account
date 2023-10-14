@@ -1,7 +1,7 @@
 <?php
 
-require __DIR__.'/Users.php';
 require __DIR__.'/VeriCodes.php';
+require __DIR__.'/Users.php';
 require __DIR__.'/Sessions.php';
 
 require __DIR__.'/API/SignupAPI.php';
@@ -14,8 +14,8 @@ use React\Promise;
 class App extends Infinex\App\App {
     private $pdo;
     
-    private $users;
     private $vc;
+    private $users;
     private $sessions;
     
     private $signupApi;
@@ -36,15 +36,16 @@ class App extends Infinex\App\App {
             DB_NAME
         );
         
-        $this -> users = new Users(
-            $this -> log,
-            $this -> amqp,
-            $this -> pdo
-        );
-        
         $this -> vc = new VeriCodes(
             $this -> log,
             $this -> pdo
+        );
+        
+        $this -> users = new Users(
+            $this -> log,
+            $this -> amqp,
+            $this -> pdo,
+            $this -> vc
         );
         
         $this -> sessions = new Sessions(
@@ -105,10 +106,11 @@ class App extends Infinex\App\App {
             }
         ) -> then(
             function() use($th) {
-                return Promise\all([
-                    $th -> users -> start(),
-                    $th -> vc -> start()
-                ]);
+                return $th -> vc -> start();
+            }
+        ) -> then(
+            function() use($th) {
+                return $th -> users -> start();
             }
         ) -> then(
             function() use($th) {
@@ -134,10 +136,11 @@ class App extends Infinex\App\App {
             }
         ) -> then(
             function() use($th) {
-                return Promise\all([
-                    $th -> users -> stop(),
-                    $th -> vc -> stop()
-                ]);
+                return $th -> users -> stop();
+            }
+        ) -> then(
+            function() use($th) {
+                return $th -> vc -> stop();
             }
         ) -> then(
             function() use($th) {
