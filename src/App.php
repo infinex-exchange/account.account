@@ -73,7 +73,6 @@ class App extends Infinex\App\App {
         $this -> passwordApi = new PasswordAPI(
             $this -> log,
             $this -> amqp,
-            $this -> pdo,
             $this -> users,
             $this -> vc
         );

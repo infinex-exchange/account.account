@@ -4,13 +4,13 @@ use Infinex\Exceptions\Error;
 
 class PasswordAPI {
     private $log;
-    private $pdo;
+    private $amqp;
     private $users;
     private $vc;
     
-    function __construct($log, $pdo, $users, $vc) {
+    function __construct($log, $amqp, $users, $vc) {
         $this -> log = $log;
-        $this -> pdo = $pdo;
+        $this -> amqp = $amqp;
         $this -> users = $users;
         $this -> vc = $vc;
         
