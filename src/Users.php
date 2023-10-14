@@ -445,7 +445,7 @@ class Users {
         $hashedPassword = password_hash($body['password'], PASSWORD_DEFAULT);
     
         $task = array(
-            ':uid' => $auth['uid'],
+            ':uid' => $body['uid'],
             ':password' => $hashedPassword
         );
     
