@@ -14,6 +14,7 @@ class EmailAPI {
         $this -> amqp = $amqp;
         $this -> pdo = $pdo;
         $this -> users = $users;
+        $this -> vc = $vc;
         
         $this -> log -> debug('Initialized email API');
     }
