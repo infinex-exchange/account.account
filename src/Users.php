@@ -462,7 +462,7 @@ class Users {
             throw new Error('NOT_FOUND', 'User '.$body['uid'].' does not exists', 404);
     }
     
-    private function validateUid($uid) {
+    public function validateUid($uid) {
         if(!is_int($uid)) return false;
         if($uid < 1) return false;
         return true;
