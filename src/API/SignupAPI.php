@@ -1,6 +1,7 @@
 <?php
 
 use Infinex\Exceptions\Error;
+use function Infinex\Validation\validateEmail;
 use Gregwar\Captcha\CaptchaBuilder;
 
 class SignupAPI {
@@ -35,7 +36,7 @@ class SignupAPI {
         if(!isset($body['captchaResponse']))
             throw new Error('MISSING_DATA', 'captchaResponse', 400);
         
-        if(!$this -> users -> validateEmail($body['email']))
+        if(!validateEmail($body['email']))
             throw new Error('VALIDATION_ERROR', 'email', 400);
         if(!$this -> validateCaptchaChal($body['captchaChallenge']))
             throw new Error('VALIDATION_ERROR', 'captchaChallenge', 400);
@@ -61,7 +62,7 @@ class SignupAPI {
         if(!isset($query['email']))
             throw new Error('MISSING_DATA', 'email', 400);
         
-        if(!$this -> users -> validateEmail($query['email']))
+        if(!validateEmail($query['email']))
             throw new Error('VALIDATION_ERROR', 'email', 400);
         
         $email = strtolower($query['email']);

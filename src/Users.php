@@ -3,6 +3,7 @@
 use Infinex\Exceptions\Error;
 use Infinex\Pagination;
 use function Infinex\Validation\validateId;
+use function Infinex\Validation\validateEmail;
 use React\Promise;
 
 class Users {
@@ -123,7 +124,7 @@ class Users {
                 throw new Error('VALIDATION_ERROR', 'uid');
         }
         else if(isset($body['email'])) {
-            if(!$this -> validateEmail($body['email']))
+            if(!validateEmail($body['email']))
                 throw new Error('VALIDATION_ERROR', 'email', 400);
         }
         else
@@ -162,7 +163,7 @@ class Users {
         if(!isset($body['password']))
             throw new Error('MISSING_DATA', 'password', 400);
         
-        if(!$this -> validateEmail($body['email']))
+        if(!validateEmail($body['email']))
             throw new Error('VALIDATION_ERROR', 'email', 400);
         if(!$this -> validatePassword($body['password']))
             throw new Error('VALIDATION_ERROR', 'password', 400);
@@ -302,7 +303,7 @@ class Users {
         
         if(!validateId($body['uid']))
             throw new Error('VALIDATION_ERROR', 'uid', 400);
-        if(!$this -> validateEmail($body['email']))
+        if(!validateEmail($body['email']))
             throw new Error('VALIDATION_ERROR', 'email', 400);
         
         $email = strtolower($body['email']);
@@ -408,11 +409,6 @@ class Users {
         
         if(!$row)
             throw new Error('NOT_FOUND', 'User '.$body['uid'].' does not exists', 404);
-    }
-    
-    public function validateEmail($mail) {
-        if(strlen($mail) > 254) return false;
-        return preg_match('/^\\w+([\\.\\+-]?\\w+)*@\\w+([\\.-]?\\w+)*(\\.\\w{2,24})+$/', $mail);
     }
     
     public function validatePassword($pw) {
