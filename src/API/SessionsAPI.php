@@ -37,8 +37,8 @@ class SessionsAPI {
         $resp = $this -> sessions -> getSessions([
             'uid' => $auth['uid'],
             'origin' => 'WEBAPP',
-            'offset' => @$body['offset'],
-            'limit' => @$body['limit']
+            'offset' => @$query['offset'],
+            'limit' => @$query['limit']
         ]);
         
         foreach($resp['sessions'] as $k => $v)
@@ -147,8 +147,8 @@ class SessionsAPI {
         $resp = $this -> sessions -> getSessions([
             'uid' => $auth['uid'],
             'origin' => 'API',
-            'offset' => @$body['offset'],
-            'limit' => @$body['limit']
+            'offset' => @$query['offset'],
+            'limit' => @$query['limit']
         ]);
         
         $apiKeys = [];
