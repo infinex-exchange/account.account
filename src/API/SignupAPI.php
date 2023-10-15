@@ -35,6 +35,8 @@ class SignupAPI {
         if(!isset($body['captchaResponse']))
             throw new Error('MISSING_DATA', 'captchaResponse', 400);
         
+        if(!$this -> users -> validateEmail($body['email']))
+            throw new Error('VALIDATION_ERROR', 'email', 400);
         if(!$this -> validateCaptchaChal($body['captchaChallenge']))
             throw new Error('VALIDATION_ERROR', 'captchaChallenge', 400);
         if(!$this -> validateCaptchaResp($body['captchaResponse']))
@@ -78,14 +80,14 @@ class SignupAPI {
         if($auth)
             throw new Error('ALREADY_LOGGED_IN', 'Already logged in', 403);
         
-        $uid = $this -> users -> emailToUid([
+        $user = $this -> users -> getUser([
             'email' => @$body['email']
         ]);
         
-        $this -> vc -> useCode($uid, 'REGISTER_USER', @$body['code']);
+        $this -> vc -> useCode($user['uid'], 'REGISTER_USER', @$body['code']);
         
         $this -> users -> verifyUser([
-            'uid' => $uid
+            'uid' => $user['uid']
         ]);
     }
     
@@ -96,8 +98,6 @@ class SignupAPI {
     private function validateCaptchaResp($captcha) {
         return preg_match('/^[a-np-zA-NP-Z1-9]{4}$/', $captcha);
     }
-
-    
 }
 
 ?>

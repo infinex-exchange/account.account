@@ -54,27 +54,38 @@ class SessionsAPI {
         if($path['sid'] == 'current')
             $path['sid'] = $auth['sid'];
         
+        $session = $this -> sessions -> getSession([
+            'sid' => $path['sid']
+        ]);
+        
+        if($session['origin'] != 'WEBAPP')
+            throw new Error('NOT_FOUND', 'Session '.$path['sid'].' not found', 404);
+        
+        if($session['uid'] != $auth['uid'])
+            throw new Error('FORBIDDEN', 'No permissions to session '.$path['sid'], 403);
+        
         return $this -> ptpSession(
-            $this -> sessions -> getSession([
-                'uid' => $auth['uid'],
-                'sid' => $path['sid'],
-                'origin' => 'WEBAPP'
-            ]),
+            $session,
             $auth['sid']
         );
     }
     
     public function killSession($path, $query, $body, $auth) {
-        if(!$auth)
-            throw new Error('UNAUTHORIZED', 'Unauthorized', 401);
-        
         if($path['sid'] == 'current')
             $path['sid'] = $auth['sid'];
         
+        $session = $this -> sessions -> getSession([
+            'sid' => $path['sid']
+        ]);
+        
+        if($session['origin'] != 'WEBAPP')
+            throw new Error('NOT_FOUND', 'Session '.$path['sid'].' not found', 404);
+        
+        if($session['uid'] != $auth['uid'])
+            throw new Error('FORBIDDEN', 'No permissions to session '.$path['sid'], 403);
+        
         $this -> sessions -> killSession([
-            'uid' => $auth['uid'],
-            'sid' => $path['sid'],
-            'origin' => 'WEBAPP'
+            'sid' => $path['sid']
         ]);
     }
     
@@ -85,16 +96,12 @@ class SessionsAPI {
             throw new Error('ALREADY_LOGGED_IN', 'Already logged in', 403);
         
         try {
-            $uid = $this -> users -> emailToUid([
-                'email' => @$body['email']
-            ]);
-            
             $user = $this -> users -> getUser([
-                'uid' => $uid
+                'email' => @$body['email']
             ]);
         
             $this -> users -> checkPassword([
-                'uid' => $uid,
+                'uid' => $user['uid'],
                 'password' => @$body['password']
             ]);
         }
@@ -115,18 +122,18 @@ class SessionsAPI {
             'account.mfa',
             'mfa',
             [
-                'uid' => $uid,
+                'uid' => $user['uid'],
                 'case' => 'LOGIN',
                 'action' => 'login',
                 'context' => null,
                 'code' => @$body['code2FA']
             ]
-        ) -> then(function() use($th, $ua, $uid, $body) {
+        ) -> then(function() use($th, $ua, $user, $body) {
             $browserDetection = new BrowserDetection();
             $browser = $browserDetection -> getAll($ua);
             
             $session = $th -> sessions -> createSession([
-                'uid' => $uid,
+                'uid' => $user['uid'],
                 'origin' => 'WEBAPP',
                 'browser' => $browser['browser_title'],
                 'os' => $browser['os_title'],
@@ -165,34 +172,61 @@ class SessionsAPI {
         if(!$auth)
             throw new Error('UNAUTHORIZED', 'Unauthorized', 401);
         
-        return $this -> ptpApiKey(
-            $this -> sessions -> getSession([
-                'uid' => $auth['uid'],
-                'sid' => $path['keyid'],
-                'origin' => 'API'
-            ])
-        );
+        $session = $this -> sessions -> getSession([
+            'sid' => $path['keyid']
+        ]);
+        
+        if($session['origin'] != 'API')
+            throw new Error('NOT_FOUND', 'API key '.$path['keyid'].' not found', 404);
+        
+        if($session['uid'] != $auth['uid'])
+            throw new Error('FORBIDDEN', 'No permissions to API key '.$path['keyid'], 403);
+        
+        return $this -> ptpApiKey($session);
     }
     
     public function editApiKey($path, $query, $body, $auth) {
         if(!$auth)
             throw new Error('UNAUTHORIZED', 'Unauthorized', 401);
         
+        $session = $this -> sessions -> getSession([
+            'sid' => $path['keyid']
+        ]);
+        
+        if($session['origin'] != 'API')
+            throw new Error('NOT_FOUND', 'API key '.$path['keyid'].' not found', 404);
+        
+        if($session['uid'] != $auth['uid'])
+            throw new Error('FORBIDDEN', 'No permissions to API key '.$path['keyid'], 403);
+        
         $this -> sessions -> editSession([
-            'uid' => $auth['uid'],
             'sid' => $path['keyid'],
             'description' => @$body['description']
         ]);
+        
+        return $this -> ptpSession(
+            $this -> sessions -> getSession([
+                'sid' => $path['keyid']
+            ])
+        );
     }
     
     public function deleteApiKey($path, $query, $body, $auth) {
         if(!$auth)
             throw new Error('UNAUTHORIZED', 'Unauthorized', 401);
         
+        $session = $this -> sessions -> getSession([
+            'sid' => $path['keyid']
+        ]);
+        
+        if($session['origin'] != 'API')
+            throw new Error('NOT_FOUND', 'API key '.$path['keyid'].' not found', 404);
+        
+        if($session['uid'] != $auth['uid'])
+            throw new Error('FORBIDDEN', 'No permissions to API key '.$path['keyid'], 403);
+        
         $this -> sessions -> killSession([
-            'uid' => $auth['uid'],
-            'sid' => $path['keyid'],
-            'origin' => 'API'
+            'sid' => $path['keyid']
         ]);
     }
     
@@ -206,10 +240,11 @@ class SessionsAPI {
             'description' => @$body['description']
         ]);
         
-        return [
-            'keyid' => $resp['sid'],
-            'apiKey' => $resp['apiKey']
-        ];
+        return ptpApiKey(
+            $this -> sessions -> getSession([
+                'sid' => $resp['sid']
+            ])
+        );
     }
     
     private function ptpSession($record, $currentSid) {

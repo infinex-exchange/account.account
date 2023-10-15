@@ -2,6 +2,7 @@
 
 use Infinex\Exceptions\Error;
 use Infinex\Pagination;
+use function Infinex\Validation\validateId;
 use React\Promise;
 
 class Users {
@@ -23,16 +24,6 @@ class Users {
         $th = $this;
         
         $promises = [];
-        
-        $promises[] = $this -> amqp -> method(
-            'uidToEmail',
-            [$this, 'uidToEmail']
-        );
-        
-        $promises[] = $this -> amqp -> method(
-            'emailToUid',
-            [$this, 'emailToUid']
-        );
         
         $promises[] = $this -> amqp -> method(
             'getUsers',
@@ -86,8 +77,6 @@ class Users {
         
         $promises = [];
         
-        $promises[] = $this -> amqp -> unreg('uidToEmail');
-        $promises[] = $this -> amqp -> unreg('emailToUid');
         $promises[] = $this -> amqp -> unreg('getUsers');
         $promises[] = $this -> amqp -> unreg('getUser');
         $promises[] = $this -> amqp -> unreg('createUser');
@@ -105,58 +94,6 @@ class Users {
                 $th -> log -> error('Failed to stop users manager: '.((string) $e));
             }
         );
-    }
-    
-    public function uidToEmail($body) {
-        if(!isset($body['uid']))
-            throw new Error('MISSING_DATA', 'uid', 400);
-        
-        if(!$this -> validateUid($body['uid']))
-            throw new Error('VALIDATION_ERROR', 'uid', 400);
-        
-        $task = array(
-            ':uid' => $body['uid']
-        );
-        
-        $sql = 'SELECT email
-                FROM users
-                WHERE uid = :uid';
-        
-        $q = $this -> pdo -> prepare($sql);
-        $q -> execute($task);
-        $row = $q -> fetch();
-        
-        if(!$row)
-            throw new Error('NOT_FOUND', 'User '.$body['uid'].' does not exists', 404);
-        
-        return $row['email'];
-    }
-    
-    public function emailToUid($body) {
-        if(!isset($body['email']))
-            throw new Error('MISSING_DATA', 'email', 400);
-        
-        if(!$this -> validateEmail($body['email']))
-            throw new Error('VALIDATION_ERROR', 'email', 400);
-        
-        $email = strtolower($body['email']);
-        
-        $task = array(
-            ':email' => $body['email']
-        );
-        
-        $sql = 'SELECT uid
-                FROM users
-                WHERE email = :email';
-        
-        $q = $this -> pdo -> prepare($sql);
-        $q -> execute($task);
-        $row = $q -> fetch();
-        
-        if(!$row)
-            throw new Error('NOT_FOUND', 'User '.$body['email'].' does not exists', 404);
-        
-        return $row['uid'];
     }
     
     public function getUsers($body) {
@@ -181,22 +118,33 @@ class Users {
     }
     
     public function getUser($body) {
-        if(!isset($body['uid']))
-            throw new Error('MISSING_DATA', 'uid', 400);
+        if(isset($body['uid'])) {
+            if(!validateId($body['uid']))
+                throw new Error('VALIDATION_ERROR', 'uid');
+        }
+        else if(isset($body['email'])) {
+            if(!$this -> validateEmail($body['email']))
+                throw new Error('VALIDATION_ERROR', 'email', 400);
+        }
+        else
+            throw new Error('MISSING_DATA', 'email or uid');
         
-        if(!$this -> validateUid($body['uid']))
-            throw new Error('VALIDATION_ERROR', 'uid', 400);
-        
-        $task = array(
-            ':uid' => $body['uid']
-        );
+        $task = [];
         
         $sql = 'SELECT uid,
                        email,
                        verified,
                        EXTRACT(epoch FROM register_time) AS register_time
-                FROM users
-                WHERE uid = :uid';
+                FROM users';
+        
+        if(isset($body['uid'])) {
+            $task[':uid'] = $body['uid'];
+            $sql .= ' WHERE uid = :uid';
+        }
+        else {
+            $task[':email'] = strtolower($body['email']);
+            $sql .= ' WHERE email = :email';
+        }
         
         $q = $this -> pdo -> prepare($sql);
         $q -> execute($task);
@@ -307,7 +255,7 @@ class Users {
         if(!isset($body['uid']))
             throw new Error('MISSING_DATA', 'uid', 400);
         
-        if(!$this -> validateUid($body['uid']))
+        if(!validateId($body['uid']))
             throw new Error('VALIDATION_ERROR', 'uid', 400);
         
         $this -> pdo -> beginTransaction();
@@ -352,7 +300,7 @@ class Users {
         if(!isset($body['email']))
             throw new Error('MISSING_DATA', 'email', 400);
         
-        if(!$this -> validateUid($body['uid']))
+        if(!validateId($body['uid']))
             throw new Error('VALIDATION_ERROR', 'uid', 400);
         if(!$this -> validateEmail($body['email']))
             throw new Error('VALIDATION_ERROR', 'email', 400);
@@ -407,7 +355,7 @@ class Users {
         if(!isset($body['password']))
             throw new Error('MISSING_DATA', 'password', 400);
         
-        if(!$this -> validateUid($body['uid']))
+        if(!validateId($body['uid']))
             throw new Error('VALIDATION_ERROR', 'uid', 400);
         if(!$this -> validatePassword($body['password']))
             throw new Error('VALIDATION_ERROR', 'email', 400);
@@ -437,7 +385,7 @@ class Users {
         if(!isset($body['password']))
             throw new Error('MISSING_DATA', 'password', 400);
         
-        if(!$this -> validateUid($body['uid']))
+        if(!validateId($body['uid']))
             throw new Error('VALIDATION_ERROR', 'uid', 400);
         if(!$this -> validatePassword($body['password']))
             throw new Error('VALIDATION_ERROR', 'password', 400);
@@ -460,12 +408,6 @@ class Users {
         
         if(!$row)
             throw new Error('NOT_FOUND', 'User '.$body['uid'].' does not exists', 404);
-    }
-    
-    public function validateUid($uid) {
-        if(!is_int($uid)) return false;
-        if($uid < 1) return false;
-        return true;
     }
     
     public function validateEmail($mail) {

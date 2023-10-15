@@ -42,24 +42,31 @@ class PasswordAPI {
         if($auth)
             throw new Error('ALREADY_LOGGED_IN', 'Already logged in', 403);
         
-        $uid = $this -> users -> emailToUid([
-            'email' => $body['email']
+        $user = $this -> users -> getUser([
+            'email' => @$body['email']
         ]);
         
+        if(!$user['verified'])
+            throw new Error(
+                'ACCOUNT_INACTIVE',
+                'Your account is inactive. Please check your mailbox for activation link',
+                403
+            );
+        
         $generatedCode = $this -> vc -> createCode(
-            $uid,
+            $user['uid'],
             'PASSWORD_RESET'
         );
         
         $this -> amqp -> pub(
             'mail',
             [
-                'uid' => $uid,
+                'uid' => $user['uid'],
                 'template' => 'password_reset',
                 'context' => [
                     'code' => $generatedCode
                 ],
-                'email' => strtolower($body['email'])
+                'email' => $user['email']
             ]
         );
     }
@@ -68,18 +75,18 @@ class PasswordAPI {
         if($auth)
             throw new Error('ALREADY_LOGGED_IN', 'Already logged in', 403);
         
-        $uid = $this -> users -> emailToUid([
-            'email' => $body['email']
+        $user = $this -> users -> getUser([
+            'email' => @$body['email']
         ]);
         
         $this -> vc -> useCode(
-            $uid,
+            $user['uid'],
             'PASSWORD_RESET',
             @$body['code']
         );
         
         $this -> users -> changePassword([
-            'uid' => $uid,
+            'uid' => $user['uid'],
             'password' => @$body['password']
         ]);
     }

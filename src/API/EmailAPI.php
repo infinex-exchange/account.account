@@ -30,7 +30,7 @@ class EmailAPI {
         if(!$auth)
             throw new Error('UNAUTHORIZED', 'Unauthorized', 401);
         
-        $currentEmail = $this -> users -> uidToEmail([
+        $user = $this -> users -> getUser([
             'uid' => $auth['uid']
         ]);
         
@@ -46,13 +46,13 @@ class EmailAPI {
         $q = $this -> pdo -> prepare($sql);
         $q -> execute($task);
         $row = $q -> fetch();
-        $pendingEmail = null;
         
+        $pendingEmail = null;
         if($row)
             $pendingEmail = $row['context_data'];
         
         return [
-            'email' => $currentEmail,
+            'email' => $user['email'],
             'pendingChange' => $pendingEmail
         ];
     }
@@ -62,7 +62,7 @@ class EmailAPI {
             throw new Error('UNAUTHORIZED', 'Unauthorized', 401);
         
         try {
-            if($this -> users -> emailToUid([ 'email' => @$body['email'] ]))
+            if($this -> users -> getUser([ 'email' => @$body['email'] ]))
                 throw new Error('CONFLICT', 'This e-mail address is already in use', 409);
         }
         catch(Error $e) {
@@ -91,9 +91,15 @@ class EmailAPI {
                 'context' => [
                     'new_email' => $email,
                     'code' => $generatedCode
-                ]
+                ],
+                'email' => $user['email']
             ]
         );
+        
+        return [
+            'email' => $user['email'],
+            'pendingChange' => $email
+        ];
     }
     
     public function confirmChangeEmail($path, $query, $body, $auth) {
@@ -110,6 +116,11 @@ class EmailAPI {
             'uid' => $auth['uid'],
             'email' => $newEmail
         ]);
+        
+        return [
+            'email' => $newEmail,
+            'pendingChange' => null
+        ];
     }
     
     public function cancelChangeEmail($path, $query, $body, $auth) {
@@ -118,6 +129,15 @@ class EmailAPI {
         
         if(! $this -> vc -> deletePrevCodes($auth['uid'], 'CHANGE_EMAIL'))
             throw new Error('NOT_FOUND', 'No pending e-mail change', 404);
+        
+        $user = $this -> users -> getUser([
+            'uid' => $auth['uid']
+        ]);
+        
+        return [
+            'email' => $user['email'],
+            'pendingChange' => null
+        ];
     }
 }
 

@@ -2,6 +2,7 @@
 
 use Infinex\Exceptions\Error;
 use Infinex\Pagination;
+use function Infinex\Validation\validateId;
 use React\Promise;
 
 class Sessions {
@@ -25,11 +26,6 @@ class Sessions {
         $promises = [];
         
         $promises[] = $this -> amqp -> method(
-            'checkApiKey',
-            [$this, 'checkApiKey']
-        );
-        
-        $promises[] = $this -> amqp -> method(
             'getSessions',
             [$this, 'getSessions']
         );
@@ -37,6 +33,11 @@ class Sessions {
         $promises[] = $this -> amqp -> method(
             'getSession',
             [$this, 'getSession']
+        );
+        
+        $promises[] = $this -> amqp -> method(
+            'checkApiKey',
+            [$this, 'checkApiKey']
         );
         
         $promises[] = $this -> amqp -> method(
@@ -71,9 +72,9 @@ class Sessions {
         
         $promises = [];
         
-        $promises[] = $this -> amqp -> unreg('checkApiKey');
         $promises[] = $this -> amqp -> unreg('getSessions');
         $promises[] = $this -> amqp -> unreg('getSession');
+        $promises[] = $this -> amqp -> unreg('checkApiKey');
         $promises[] = $this -> amqp -> unreg('killSession');
         $promises[] = $this -> amqp -> unreg('createSession');
         $promises[] = $this -> amqp -> unreg('editSession');
@@ -89,45 +90,15 @@ class Sessions {
         );
     }
     
-    public function checkApiKey($body) {
-        if(!isset($body['apiKey']))
-            throw new Error('MISSING_DATA', 'apiKey', 400);
-            
-        if(!$this -> validateApiKey($body['apiKey']))
-            throw new Error('VALIDATION_ERROR', 'Invalid API key format', 400);
-        
-        $task = array(
-            ':api_key' => $body['apiKey']
-        );
-        
-        $sql = 'UPDATE sessions
-                SET wa_lastact = CURRENT_TIMESTAMP
-                WHERE api_key = :api_key
-                RETURNING sid,
-                          uid';
-        
-        $q = $this -> pdo -> prepare($sql);
-        $q -> execute($task);
-        $row = $q -> fetch();
-        
-        if(!$row)
-            throw new Error('UNAUTHORIZED', 'Invalid API key', 401);
-        
-        return [
-            'uid' => $row['uid'],
-            'sid' => $row['sid']
-        ];
-    }
-    
     public function getSessions($body) {
-        if(isset($body['uid']) && ! $this -> users -> validateUid($body['uid']))
+        if(isset($body['uid']) && !validateId($body['uid']))
             throw new Error('VALIDATION_ERROR', 'uid', 400);
         if(isset($body['origin']) && !in_array($body['origin'], ['WEBAPP', 'API']))
             throw new Error('VALIDATION_ERROR', 'origin', 400);
         
         $pag = new Pagination\Offset(50, 500, $body);
         
-        $task = array();
+        $task = [];
         
         $sql = 'SELECT sid,
                        uid,
@@ -175,12 +146,8 @@ class Sessions {
         if(!isset($body['sid']))
             throw new Error('MISSING_DATA', 'sid', 400);
         
-        if(!$this -> validateSid($body['sid']))
+        if(!validateId($body['sid']))
             throw new Error('VALIDATION_ERROR', 'sid', 400);
-        if(isset($body['uid']) && ! $this -> users -> validateUid($body['uid']))
-            throw new Error('VALIDATION_ERROR', 'uid', 400);
-        if(isset($body['origin']) && !in_array($body['origin'], ['WEBAPP', 'API']))
-            throw new Error('VALIDATION_ERROR', 'origin', 400);
         
         $task = array(
             ':sid' => $body['sid']
@@ -199,16 +166,6 @@ class Sessions {
                FROM sessions
                WHERE sid = :sid';
         
-        if(isset($body['uid'])) {
-            $task[':uid'] = $body['uid'];
-            $sql .= ' AND uid = :uid';
-        }
-        
-        if(isset($body['origin'])) {
-            $task[':origin'] = $body['origin'];
-            $sql .= ' AND origin = :origin';
-        }
-        
         $q = $this -> pdo -> prepare($sql);
         $q -> execute($task);
         
@@ -218,35 +175,50 @@ class Sessions {
         return $this -> rtrSession($row);
     }
     
+    public function checkApiKey($body) {
+        if(!isset($body['apiKey']))
+            throw new Error('MISSING_DATA', 'apiKey', 400);
+            
+        if(!$this -> validateApiKey($body['apiKey']))
+            throw new Error('VALIDATION_ERROR', 'Invalid API key format', 400);
+        
+        $task = array(
+            ':api_key' => $body['apiKey']
+        );
+        
+        $sql = 'UPDATE sessions
+                SET wa_lastact = CURRENT_TIMESTAMP
+                WHERE api_key = :api_key
+                RETURNING sid,
+                          uid';
+        
+        $q = $this -> pdo -> prepare($sql);
+        $q -> execute($task);
+        $row = $q -> fetch();
+        
+        if(!$row)
+            throw new Error('UNAUTHORIZED', 'Invalid API key', 401);
+        
+        return [
+            'uid' => $row['uid'],
+            'sid' => $row['sid']
+        ];
+    }
+    
     public function killSession($body) {
         if(!isset($body['sid']))
             throw new Error('MISSING_DATA', 'sid', 400);
         
-        if(!$this -> validateSid($body['sid']))
+        if(!validateId($body['sid']))
             throw new Error('VALIDATION_ERROR', 'sid', 400);
-        if(isset($body['uid']) && ! $this -> users -> validateUid($body['uid']))
-            throw new Error('VALIDATION_ERROR', 'uid', 400);
-        if(isset($body['origin']) && !in_array($body['origin'], ['WEBAPP', 'API']))
-            throw new Error('VALIDATION_ERROR', 'origin', 400);
         
         $task = array(
             ':sid' => $body['sid']
         );
         
         $sql = 'DELETE FROM sessions
-                WHERE sid = :sid';
-        
-        if(isset($body['uid'])) {
-            $task[':uid'] = $body['uid'];
-            $sql .= ' AND uid = :uid';
-        }
-        
-        if(isset($body['origin'])) {
-            $task[':origin'] = $body['origin'];
-            $sql .= ' AND origin = :origin';
-        }
-        
-        $sql .= ' RETURNING 1';
+                WHERE sid = :sid
+                RETURNING 1';
         
         $q = $this -> pdo -> prepare($sql);
         $q -> execute($task);
@@ -262,7 +234,7 @@ class Sessions {
         if(!isset($body['origin']))
             throw new Error('MISSING_DATA', 'origin', 400);
         
-        if(! $this -> users -> validateUid($body['uid']))
+        if(!validateId($body['uid']))
             throw new Error('VALIDATION_ERROR', 'uid', 400);
         if(!in_array($body['origin'], ['WEBAPP', 'API']))
             throw new Error('VALIDATION_ERROR', 'origin', 400);
@@ -282,9 +254,13 @@ class Sessions {
             if(!isset($body['description']))
                 throw new Error('MISSING_DATA', 'description', 400);
             
-            if(! $this -> validateApiKeyDescription($body['description']))
+            if(!$this -> validateApiKeyDescription($body['description']))
                 throw new Error('VALIDATION_ERROR', 'description', 400);
-            
+        }
+        
+        $this -> pdo -> beginTransaction();
+        
+        if($body['origin'] == 'API') {
             // Check api key with this name already exists
             $task = array(
                 ':uid' => $body['uid'],
@@ -295,14 +271,17 @@ class Sessions {
                     FROM sessions
                     WHERE uid = :uid
                     AND ak_description = :description
-                    AND origin = 'API'";
+                    AND origin = 'API'
+                    FOR UPDATE";
             
             $q = $this -> pdo -> prepare($sql);
             $q -> execute($task);
             $row = $q -> fetch();
             
-            if($row)
+            if($row) {
+                $this -> pdo -> rollBack();
                 throw new Error('CONFLICT', 'API key with this name already exists', 409);
+            }
         }
         
         // Generate and insert api key
@@ -353,6 +332,8 @@ class Sessions {
         $q -> execute($task);
         $row = $q -> fetch();
         
+        $this -> pdo -> commit();
+        
         return [
             'sid' => $row['sid'],
             'apiKey' => $generatedApiKey
@@ -365,36 +346,33 @@ class Sessions {
         if(!isset($body['description']))
             throw new Error('MISSING_DATA', 'description', 400);
         
-        if(!$this -> validateSid($body['sid']))
+        if(!validateId($body['sid']))
             throw new Error('VALIDATION_ERROR', 'sid', 400);
         if(!$this -> validateApiKeyDescription($body['description']))
             throw new Error('VALIDATION_ERROR', 'description', 400);
-        if(isset($body['uid']) && ! $this -> users -> validateUid($body['uid']))
-            throw new Error('VALIDATION_ERROR', 'uid', 400);
             
-        if(isset($body['uid']))
-            $uid = $body['uid'];
-        else {
-            // Get uid
-            $task = array(
-                ':sid' => $body['sid']
-            );
-            
-            $sql = 'SELECT uid
-                    FROM sessions
-                    WHERE sid = :sid';
-            
-            $q = $this -> pdo -> prepare($sql);
-            $q -> execute($task);
-            $row = $q -> fetch();
-            
-            if(!$row)
-                throw new Error('NOT_FOUND', 'API key '.$body['sid'].' not found', 404);
-            
-            $uid = $row['uid'];
+        $this -> pdo -> beginTransaction();
+        
+        // Get uid
+        $task = array(
+            ':sid' => $body['sid']
+        );
+        
+        $sql = 'SELECT uid
+                FROM sessions
+                WHERE sid = :sid
+                FOR UPDATE';
+        
+        $q = $this -> pdo -> prepare($sql);
+        $q -> execute($task);
+        $row = $q -> fetch();
+        
+        if(!$row) {
+            $this -> pdo -> rollBack();
+            throw new Error('NOT_FOUND', 'API key '.$body['sid'].' not found', 404);
         }
         
-        $this -> pdo -> beginTransaction();
+        $uid = $row['uid'];
         
         // Check api key with this name already exists
         $task = array(
@@ -421,30 +399,16 @@ class Sessions {
         }
     
         // Update api key
-        
         $sql = "UPDATE sessions
                 SET ak_description = :description
                 WHERE uid = :uid
                 AND sid = :sid
-                AND origin = 'API'
-                RETURNING 1";
+                AND origin = 'API'";
         
         $q = $this -> pdo -> prepare($sql);
         $q -> execute($task);
-        $row = $q -> fetch();
-        
-        if(!$row) {
-            $this -> pdo -> rollBack();
-            throw new Error('NOT_FOUND', 'API key '.$body['sid'].' not found', 404);
-        }
         
         $this -> pdo -> commit();
-    }
-    
-    private function validateSid($sid) {
-        if(!is_int($sid)) return false;
-        if($sid < 1) return false;
-        return true;
     }
     
     private function validateApiKey($apiKey) {
