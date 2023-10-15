@@ -74,7 +74,7 @@ class PasswordAPI {
         
         $this -> vc -> useCode(
             $uid,
-            'PASWORD_RESET',
+            'PASSWORD_RESET',
             @$body['code']
         );
         
