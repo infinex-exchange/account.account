@@ -108,7 +108,7 @@ class Users {
                 ORDER BY uid DESC'
               . $pag -> sql();
         
-        $q = $this -> query($sql);
+        $q = $this -> pdo -> query($sql);
         
         $users = [];
         
