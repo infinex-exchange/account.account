@@ -168,6 +168,7 @@ class Sessions {
         
         $q = $this -> pdo -> prepare($sql);
         $q -> execute($task);
+        $row = $q -> fetch();
         
         if(!$row)
             throw new Error('NOT_FOUND', 'Session '.$body['sid'].' not found', 404);
