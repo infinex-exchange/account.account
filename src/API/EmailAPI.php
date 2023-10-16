@@ -75,6 +75,10 @@ class EmailAPI {
         
         $email = strtolower($body['email']);
         
+        $user = $this -> users -> getUser([
+            'uid' => $auth['uid']
+        ]);
+        
         $this -> users -> checkPassword([
             'uid' => $auth['uid'],
             'password' => @$body['password']
@@ -98,10 +102,6 @@ class EmailAPI {
                 'email' => $user['email']
             ]
         );
-        
-        $user = $this -> users -> getUser([
-            'uid' => $auth['uid']
-        ]);
         
         return [
             'email' => $user['email'],
