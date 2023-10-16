@@ -204,7 +204,7 @@ class SessionsAPI {
             'description' => @$body['description']
         ]);
         
-        return $this -> ptpSession(
+        return $this -> ptpApiKey(
             $this -> sessions -> getSession([
                 'sid' => $path['keyid']
             ])
