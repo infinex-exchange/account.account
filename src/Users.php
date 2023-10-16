@@ -143,10 +143,12 @@ class Users {
         if(isset($body['uid'])) {
             $task[':uid'] = $body['uid'];
             $sql .= ' WHERE uid = :uid';
+            $msgUser = $body['uid'];
         }
         else {
             $task[':email'] = strtolower($body['email']);
             $sql .= ' WHERE email = :email';
+            $msgUser = $task[':email'];
         }
         
         $q = $this -> pdo -> prepare($sql);
@@ -154,7 +156,7 @@ class Users {
         $row = $q -> fetch();
         
         if(!$row)
-            throw new Error('NOT_FOUND', 'User '.$body['uid'].' does not exists', 404);
+            throw new Error('NOT_FOUND', 'User '.$msgUser.' does not exists', 404);
         
         return $this -> rtrUser($row);
     }

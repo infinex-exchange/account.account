@@ -62,8 +62,11 @@ class EmailAPI {
             throw new Error('UNAUTHORIZED', 'Unauthorized', 401);
         
         try {
-            if($this -> users -> getUser([ 'email' => @$body['email'] ]))
-                throw new Error('CONFLICT', 'This e-mail address is already in use', 409);
+            $this -> users -> getUser([
+                'email' => @$body['email']
+            ]);
+            
+            throw new Error('CONFLICT', 'This e-mail address is already in use', 409);
         }
         catch(Error $e) {
             if($e -> getStrCode() != 'NOT_FOUND')
@@ -95,6 +98,10 @@ class EmailAPI {
                 'email' => $user['email']
             ]
         );
+        
+        $user = $this -> users -> getUser([
+            'uid' => $auth['uid']
+        ]);
         
         return [
             'email' => $user['email'],
