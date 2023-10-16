@@ -116,6 +116,11 @@ class Users {
             if($pag -> iter()) break;
             $users[] = $this -> rtrUser($row);
         }
+        
+        return [
+            'users' => $users,
+            'more' => $pag -> more
+        ];
     }
     
     public function getUser($body) {
