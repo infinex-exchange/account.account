@@ -119,7 +119,9 @@ class Users {
     }
     
     public function getUser($body) {
-        if(isset($body['uid'])) {
+        if(isset($body['uid']) && isset($body['email']))
+            throw new Error('ARGUMENTS_CONFLICT', 'Both uid and email are set', 400);
+        else if(isset($body['uid'])) {
             if(!validateId($body['uid']))
                 throw new Error('VALIDATION_ERROR', 'uid');
         }
