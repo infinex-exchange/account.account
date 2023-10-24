@@ -1,7 +1,6 @@
 <?php
 
 use Infinex\Exceptions\Error;
-use Infinex\Exceptions\UniqueViolation;
 use Infinex\Pagination;
 use function Infinex\Validation\validateId;
 use React\Promise;
@@ -345,7 +344,8 @@ class Sessions {
         try {
             $q -> execute($task);
         }
-        catch(UniqueViolation $e) {
+        catch(\PDOException $e) {
+            if($e -> getCode() != 23505) throw $e;
             throw new Error('CONFLICT', 'API key with this name already exists', 409);
         }
         
