@@ -349,6 +349,7 @@ class Sessions {
             throw new Error('CONFLICT', 'API key with this name already exists', 409);
         }
         
+        $row = $q -> fetch();
         if(!$row)
             throw new Error('NOT_FOUND', 'API key '.$body['sid'].' not found', 404);
     }
