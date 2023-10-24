@@ -308,7 +308,7 @@ class Sessions {
         $q -> execute($task);
         $row = $q -> fetch();
         
-        if($row)
+        if(!$row)
             throw new Error('CONFLICT', 'API key with this name already exists', 409);
         
         return [
