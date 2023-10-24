@@ -259,32 +259,6 @@ class Sessions {
                 throw new Error('VALIDATION_ERROR', 'description', 400);
         }
         
-        $this -> pdo -> beginTransaction();
-        
-        if($body['origin'] == 'API') {
-            // Check api key with this name already exists
-            $task = array(
-                ':uid' => $body['uid'],
-                ':description' => $body['description']
-            );
-            
-            $sql = "SELECT 1
-                    FROM sessions
-                    WHERE uid = :uid
-                    AND ak_description = :description
-                    AND origin = 'API'
-                    FOR UPDATE";
-            
-            $q = $this -> pdo -> prepare($sql);
-            $q -> execute($task);
-            $row = $q -> fetch();
-            
-            if($row) {
-                $this -> pdo -> rollBack();
-                throw new Error('CONFLICT', 'API key with this name already exists', 409);
-            }
-        }
-        
         // Generate and insert api key
         $generatedApiKey = bin2hex(random_bytes(32));
         
@@ -327,13 +301,15 @@ class Sessions {
                     :wa_device,
                     :ak_description
                 )
-                RETURNING sid';
+                RETURNING sid
+                ON CONFLICT DO NOTHING';
         
         $q = $this -> pdo -> prepare($sql);
         $q -> execute($task);
         $row = $q -> fetch();
         
-        $this -> pdo -> commit();
+        if($row)
+            throw new Error('CONFLICT', 'API key with this name already exists', 409);
         
         return [
             'sid' => $row['sid'],
@@ -351,65 +327,24 @@ class Sessions {
             throw new Error('VALIDATION_ERROR', 'sid', 400);
         if(!$this -> validateApiKeyDescription($body['description']))
             throw new Error('VALIDATION_ERROR', 'description', 400);
-            
-        $this -> pdo -> beginTransaction();
-        
-        // Get uid
-        $task = array(
-            ':sid' => $body['sid']
-        );
-        
-        $sql = 'SELECT uid
-                FROM sessions
-                WHERE sid = :sid
-                FOR UPDATE';
-        
-        $q = $this -> pdo -> prepare($sql);
-        $q -> execute($task);
-        $row = $q -> fetch();
-        
-        if(!$row) {
-            $this -> pdo -> rollBack();
-            throw new Error('NOT_FOUND', 'API key '.$body['sid'].' not found', 404);
-        }
-        
-        $uid = $row['uid'];
-        
-        // Check api key with this name already exists
-        $task = array(
-            ':uid' => $uid,
-            ':description' => $body['description'],
-            ':sid' => $body['sid']
-        );
-        
-        $sql = "SELECT 1
-                FROM sessions
-                WHERE uid = :uid
-                AND ak_description = :description
-                AND origin = 'API'
-                AND sid != :sid
-                FOR UPDATE";
-        
-        $q = $this -> pdo -> prepare($sql);
-        $q -> execute($task);
-        $row = $q -> fetch();
-        
-        if($row) {
-            $this -> pdo -> rollBack();
-            throw new Error('CONFLICT', 'API key with this name already exists', 409);
-        }
     
         // Update api key
         $sql = "UPDATE sessions
                 SET ak_description = :description
                 WHERE uid = :uid
                 AND sid = :sid
-                AND origin = 'API'";
+                AND origin = 'API'
+                RETURNING 1";
         
         $q = $this -> pdo -> prepare($sql);
-        $q -> execute($task);
-        
-        $this -> pdo -> commit();
+        //try {
+            $q -> execute($task);
+        //}
+        //catch(\PDOException $e) {
+            //throw new Error('CONFLICT', 'API key with this name already exists', 409);
+        //}
+        if(!$row)
+            throw new Error('NOT_FOUND', 'API key '.$body['sid'].' not found', 404);
     }
     
     private function validateApiKey($apiKey) {

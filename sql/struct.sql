@@ -23,6 +23,7 @@ create table sessions(
     wa_device varchar(32) null,
     ak_description varchar(255) null,
     
+    unique(uid, ak_description),
     foreign key(uid) references users(uid)
 );
 
