@@ -343,8 +343,7 @@ class Sessions {
         $q = $this -> pdo -> prepare($sql);
         try {
             $q -> execute($task);
-        }
-        catch(\PDOException $e) {
+        } catch(\PDOException $e) {
             if($e -> getCode() != 23505) throw $e;
             throw new Error('CONFLICT', 'API key with this name already exists', 409);
         }

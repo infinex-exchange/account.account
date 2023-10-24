@@ -179,26 +179,6 @@ class Users {
         
         $email = strtolower($body['email']);
         $hashedPassword = password_hash($body['password'], PASSWORD_DEFAULT);
-        
-        $this -> pdo -> beginTransaction();
-        
-        $task = array(
-            ':email' => $email
-        );
-        
-        $sql = 'SELECT uid
-                FROM users
-                WHERE email = :email
-                FOR UPDATE';
-        
-        $q = $this -> pdo -> prepare($sql);
-        $q -> execute($task);
-        $row = $q -> fetch();
-        
-        if($row) {
-            $this -> pdo -> rollBack();
-            throw new Error('CONFLICT', 'This e-mail address is already in use', 409);
-        }
     
         $task = array(
             ':email' => $email,
@@ -218,15 +198,16 @@ class Users {
             FALSE,
             CURRENT_TIMESTAMP
         )
+        ON CONFLICT DO NOTHING
         RETURNING uid';
         
         $q = $this -> pdo -> prepare($sql);
         $q -> execute($task);
         $row = $q -> fetch();
+        if(!$row)
+            throw new Error('CONFLICT', 'This e-mail address is already in use', 409);
         
         $uid = $row['uid'];
-        
-        $this -> pdo -> commit();
         
         $this -> amqp -> pub(
             'registerUser',
@@ -317,26 +298,6 @@ class Users {
         
         $email = strtolower($body['email']);
         
-        $this -> pdo -> beginTransaction();
-        
-        $task = array(
-            ':email' => $email
-        );
-        
-        $sql = 'SELECT 1
-                FROM users
-                WHERE email = :email
-                FOR UPDATE';
-        
-        $q = $this -> pdo -> prepare($sql);
-        $q -> execute($task);
-        $row = $q -> fetch();
-        
-        if($row) {
-            $this -> pdo -> rollBack();
-            throw new Error('CONFLICT', 'This e-mail address is already in use', 409);
-        }
-        
         $task = array(
             ':uid' => $body['uid'],
             ':email' => $email
@@ -348,15 +309,17 @@ class Users {
                 RETURNING 1';
     
         $q = $this -> pdo -> prepare($sql);
-        $q -> execute($task);
-        $row = $q -> fetch();
-        
-        if(!$row) {
-            $this -> pdo -> rollBack();
-            throw new Error('NOT_FOUND', 'User '.$body['uid'].' does not exists', 404);
+        try {
+            $q -> execute($task);
+        } catch(\PDOException $e) {
+            if($e -> getCode() != 23505) throw $e;
+            throw new Error('CONFLICT', 'This e-mail address is already in use', 409);
         }
         
-        $this -> pdo -> commit();
+        $row = $q -> fetch();
+        
+        if(!$row)
+            throw new Error('NOT_FOUND', 'User '.$body['uid'].' does not exists', 404);
     }
     
     public function checkPassword($body) {
