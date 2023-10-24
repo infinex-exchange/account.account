@@ -329,10 +329,14 @@ class Sessions {
             throw new Error('VALIDATION_ERROR', 'description', 400);
     
         // Update api key
+        $task = [
+            ':sid' => $body['sid'],
+            ':description' => $body['description']
+        ];
+        
         $sql = "UPDATE sessions
                 SET ak_description = :description
-                WHERE uid = :uid
-                AND sid = :sid
+                WHERE sid = :sid
                 AND origin = 'API'
                 RETURNING 1";
         
