@@ -301,8 +301,8 @@ class Sessions {
                     :wa_device,
                     :ak_description
                 )
-                RETURNING sid
-                ON CONFLICT DO NOTHING';
+                ON CONFLICT DO NOTHING
+                RETURNING sid';
         
         $q = $this -> pdo -> prepare($sql);
         $q -> execute($task);
