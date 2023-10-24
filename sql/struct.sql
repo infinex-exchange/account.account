@@ -5,7 +5,9 @@ create table users(
     email varchar(255) not null,
     password varchar(255) not null,
     verified boolean not null default false,
-    register_time timestamptz not null default current_timestamp
+    register_time timestamptz not null default current_timestamp,
+    
+    unique(email)
 );
 
 GRANT SELECT, UPDATE, INSERT ON users TO "account.account";
