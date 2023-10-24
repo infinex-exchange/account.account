@@ -1,6 +1,7 @@
 <?php
 
 use Infinex\Exceptions\Error;
+use Infinex\Exceptions\UniqueViolation;
 use Infinex\Pagination;
 use function Infinex\Validation\validateId;
 use React\Promise;
@@ -341,12 +342,13 @@ class Sessions {
                 RETURNING 1";
         
         $q = $this -> pdo -> prepare($sql);
-        //try {
+        try {
             $q -> execute($task);
-        //}
-        //catch(\PDOException $e) {
-            //throw new Error('CONFLICT', 'API key with this name already exists', 409);
-        //}
+        }
+        catch(UniqueViolation $e) {
+            throw new Error('CONFLICT', 'API key with this name already exists', 409);
+        }
+        
         if(!$row)
             throw new Error('NOT_FOUND', 'API key '.$body['sid'].' not found', 404);
     }
